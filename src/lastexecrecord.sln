@@ -1,0 +1,21 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.0.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}") = "lastexecuterecord", "src\lastexecuterecord\lastexecuterecord.vcxproj", "{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}.Debug|Win32.Build.0 = Debug|Win32
+		{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}.Release|Win32.ActiveCfg = Release|Win32
+		{8CC8ED84-2B00-4B89-ACEF-400C8F2774AE}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
