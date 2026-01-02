@@ -1,0 +1,41 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'af752f21c9d79ba3df9cb0250ce2233933f58486'
+        
+    - name: Install dependencies
+      run: vcpkg install
+      
+    - name: Configure CMake
+      run: |
+        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        
+    - name: Build
+      run: cmake --build build --config Debug
+      
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure -C Debug
+        
+    - name: Build Release
+      run: cmake --build build --config Release
