@@ -5,6 +5,7 @@ find_package(doctest CONFIG REQUIRED)
 
 # Test sources
 set(TEST_SOURCES
+    test_main.cpp
     TimeUtil.tests.cpp
     Json.tests.cpp
     CommandRunner.tests.cpp
