@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <Windows.h>
@@ -36,8 +36,5 @@ struct FileLock {
 };
 
 FileLock acquireLockFile(const std::wstring& lockPath);
-
-bool isUncPath(const std::wstring& path);
-std::wstring getComputerNameString();
 
 } // namespace ler

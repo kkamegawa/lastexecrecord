@@ -1,4 +1,4 @@
-# Implementation map
+﻿# Implementation map
 
 どこに何があるか、メンテ/追加実装時の入口をまとめます。
 
@@ -14,7 +14,6 @@
 - `src/lastexecuterecord/Config.h/.cpp`
   - `loadAndValidateConfig(path)`
   - `applyCommandsToJson(cfg)`
-  - localOnly の pinning（PC名の自動埋め込み）
 
 ## JSON
 
@@ -28,7 +27,6 @@
   - `readUtf8FileToWString(path)`
   - `writeWStringToUtf8FileAtomic(path, content)`
   - `acquireLockFile(path)`
-  - `getComputerNameString()`
 
 ## Time
 

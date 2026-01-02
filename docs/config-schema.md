@@ -1,4 +1,4 @@
-# Config JSON schema (v1)
+﻿# Config JSON schema (v1)
 
 このプロジェクトは **設定 JSON を読み込み**、呼び出しごとに **コマンドを順次1回実行**し、
 **前回実行時刻（秒精度）** と **最低実行間隔** に基づいてスキップします。
@@ -10,8 +10,6 @@
 | key | type | required | default | note |
 | --- | --- | --- | --- | --- |
 | `version` | number | no | 1 | 予約 |
-| `localOnly` | bool | no | false | true の場合、設定をPC名にピン留め |
-| `runOnlyOnComputerName` | string | no(auto) | (auto) | `localOnly=true` の初回実行で自動設定 |
 | `defaults.minIntervalSeconds` | number | no | 0 | コマンドの既定最短間隔 |
 | `defaults.timeoutSeconds` | number | no | 0 | コマンドの既定タイムアウト（0は無制限） |
 | `commands` | array | yes | - | 実行するコマンドを上から順に処理 |
@@ -29,8 +27,6 @@
 | `timeoutSeconds` | number | no | `defaults.timeoutSeconds` | 0なら無制限 |
 | `lastRunUtc` | string | no | - | `YYYY-MM-DDTHH:MM:SSZ`（UTC、秒精度） |
 | `lastExitCode` | number | no | - | 前回の終了コード |
-| `localOnly` | bool | no | false | コマンド単位でPC名にピン留め |
-| `runOnlyOnComputerName` | string | no(auto) | (auto) | `localOnly=true` の初回実行で自動設定 |
 
 ## Time format
 

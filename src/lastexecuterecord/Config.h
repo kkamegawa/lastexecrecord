@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
 #include <string>
@@ -24,17 +24,10 @@ struct CommandConfig {
     std::wstring lastRunUtc;
     bool hasLastExitCode = false;
     std::int64_t lastExitCode = 0;
-
-    // optional pinning
-    bool localOnly = false;
-    std::wstring runOnlyOnComputerName;
 };
 
 struct AppConfig {
     std::int64_t version = 1;
-
-    bool localOnly = false;
-    std::wstring runOnlyOnComputerName;
 
     std::int64_t defaultMinIntervalSeconds = 0;
     std::int64_t defaultTimeoutSeconds = 0;

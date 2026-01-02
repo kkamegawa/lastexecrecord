@@ -1,4 +1,4 @@
-#include "FileUtil.h"
+﻿#include "FileUtil.h"
 
 #include <stdexcept>
 #include <vector>
@@ -131,19 +131,6 @@ FileLock acquireLockFile(const std::wstring& lockPath) {
         OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) throw win32Error("Failed to acquire lock file");
     return FileLock(h);
-}
-
-bool isUncPath(const std::wstring& path) {
-    if (path.size() >= 2 && path[0] == L'\\' && path[1] == L'\\') return true;
-    if (path.rfind(L"\\\\?\\UNC\\", 0) == 0) return true;
-    return false;
-}
-
-std::wstring getComputerNameString() {
-    wchar_t buf[MAX_COMPUTERNAME_LENGTH + 1] = {};
-    DWORD sz = MAX_COMPUTERNAME_LENGTH + 1;
-    if (!GetComputerNameW(buf, &sz)) return L"";
-    return std::wstring(buf, sz);
 }
 
 } // namespace ler
