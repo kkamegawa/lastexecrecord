@@ -1,116 +1,159 @@
-#include <algorithm>
-#include <iomanip>
 #include <Windows.h>
 #include <iostream>
-#include <sstream>
+#include <string>
+#include <vector>
 
-/**
- * 
- * @param lpszFileName 
- * @return 
- */
-bool IsExistFile(LPCWCHAR lpszFileName) {
-    DWORD fileAttributes = GetFileAttributes(lpszFileName);
-    if (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-		// file exists and not read only
-        if (fileAttributes & FILE_ATTRIBUTE_READONLY) {
-            return false;
-        }
-        return true;
-    }
-    return false;
+#include "CommandRunner.h"
+#include "Config.h"
+#include "FileUtil.h"
+#include "Json.h"
+#include "TimeUtil.h"
+
+static void printUsage(const wchar_t* exeName) {
+	std::wcout
+		<< L"LastExecuteRecord - run commands from JSON config once per invocation\n\n"
+		<< L"Usage:\n"
+		<< L"  " << exeName << L" [--config <path>] [--dry-run] [--verbose]\n\n"
+		<< L"Options:\n"
+		<< L"  --config <path>  Path to config JSON (default: <exe>.json)\n"
+		<< L"  --dry-run        Do not execute; only show decisions\n"
+		<< L"  --verbose        Print skip reasons and detailed output\n";
 }
 
-/**
- * 
- * @param str 
- * @return 
- */
-bool IsNumericString(LPCWSTR str) {
-	return std::all_of(str, str + wcslen(str), iswdigit);
-}
+int wmain(int argc, wchar_t* argv[]) {
+	bool dryRun = false;
+	bool verbose = false;
+	std::wstring configPath = ler::defaultConfigPath();
 
+	for (int i = 1; i < argc; i++) {
+		std::wstring a = argv[i];
+		if (a == L"--help" || a == L"-h" || a == L"/?") {
+			printUsage(argv[0]);
+			return 0;
+		}
+		if (a == L"--dry-run") {
+			dryRun = true;
+			continue;
+		}
+		if (a == L"--verbose") {
+			verbose = true;
+			continue;
+		}
+		if (a == L"--config") {
+			if (i + 1 >= argc) {
+				std::wcerr << L"--config requires a path\n";
+				return 2;
+			}
+			configPath = argv[++i];
+			continue;
+		}
 
-/**
- * 
- * @param lpszFileName 
- * @param lpszStreamName 
- * @param lpszData 
- * @return 
- */
-bool updateOrInsertNTFSDataStream(LPCWCHAR lpszFileName, LPCWCHAR lpszStreamName, LPSYSTEMTIME lpSystemTime) {
-	
-    std::ostringstream oss;
-    oss << std::setfill('0') << std::setw(4) << lpSystemTime->wYear << "-"
-        << std::setw(2) << lpSystemTime->wMonth << "-"
-        << std::setw(2) << lpSystemTime->wDay << "T"
-        << std::setw(2) << lpSystemTime->wHour << ":"
-        << std::setw(2) << lpSystemTime->wMinute << ":"
-        << std::setw(2) << lpSystemTime->wSecond;
-
-	HANDLE hFile = CreateFile(lpszFileName, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE) {
-		return false;
-	}
-	HANDLE hStream = CreateFile(lpszFileName, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hStream == INVALID_HANDLE_VALUE) {
-		CloseHandle(hFile);
-		return false;
-	}
-	DWORD dwWritten;
-	WriteFile(hStream, oss.str().c_str(), oss.str().length() * sizeof(WCHAR), &dwWritten, NULL);
-	CloseHandle(hStream);
-	CloseHandle(hFile);
-	return true;
-}
-
-bool AddTimefromCurrentTime(LPCWSTR lpszAddSecond, LPSYSTEMTIME nextTime)
-{
-	SYSTEMTIME st;
-	GetSystemTime(&st);
-	FILETIME ft;
-	SystemTimeToFileTime(&st, &ft);
-	ULARGE_INTEGER uli;
-	uli.LowPart = ft.dwLowDateTime;
-	uli.HighPart = ft.dwHighDateTime;
-	uli.QuadPart += _wtoi(lpszAddSecond) * 10000000;
-	ft.dwLowDateTime = uli.LowPart;
-	ft.dwHighDateTime = uli.HighPart;
-	FileTimeToSystemTime(&ft, nextTime);
-	return true;
-}
-
-/**
- * 
- * @param argc 
- * @param lpszArgs 
- * @return 
- */
-int main(int argc, LPCWCHAR  lpszArgs[]) {
-	if (argc != 2 || argc !=1) {
-		std::wcout << L"Usage: " << lpszArgs << L" <filename>" << std::endl;
-		return 1;
-	}
-    if(IsExistFile(lpszArgs[1]) == false)
-    {
-		std::wcout << L"File not found or not writeable." << std::endl;
-		return 1;
-    }
-	if (argc == 2 && IsNumericString(lpszArgs[2]) == false)
-	{
-		std::wcout << L"Invalid argument. second Argument must numeric value" << std::endl;
-		return 1;
-	}
-	SYSTEMTIME systemtime;
-	if (argc == 2)
-	{
-		AddTimefromCurrentTime(lpszArgs[1], &systemtime);
-	}else
-	{
-		// next 12 hours
-		AddTimefromCurrentTime(L"43200", &systemtime);
+		std::wcerr << L"Unknown argument: " << a << L"\n";
+		printUsage(argv[0]);
+		return 2;
 	}
 
-	updateOrInsertNTFSDataStream(lpszArgs[1], L"LASTEXECTIME", &systemtime);
-    return 0;
+	try {
+		// Prevent concurrent runs against the same config file.
+		ler::FileLock lock = ler::acquireLockFile(configPath + L".lock");
+
+		ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
+
+		// If localOnly pinning updated config, persist it now.
+		if (cfg.dirty) {
+			ler::applyCommandsToJson(cfg);
+			ler::writeWStringToUtf8FileAtomic(configPath, ler::writeJson(cfg.root));
+			cfg.dirty = false;
+		}
+
+		std::int64_t now = ler::nowEpochSecondsUtc();
+		int overallExit = 0;
+
+		for (size_t idx = 0; idx < cfg.commands.size(); idx++) {
+			ler::CommandConfig& c = cfg.commands[idx];
+
+			if (!c.enabled) {
+				if (verbose) std::wcout << L"[skip] " << c.name << L": disabled\n";
+				continue;
+			}
+
+			bool haveLast = false;
+			std::int64_t lastEpoch = 0;
+			if (c.hasLastRunUtc) {
+				if (ler::tryParseIsoUtcToEpochSeconds(c.lastRunUtc, lastEpoch)) {
+					haveLast = true;
+				}
+				else {
+					if (verbose) {
+						std::wcout << L"[warn] " << c.name << L": lastRunUtc has invalid format; treating as never run\n";
+					}
+					c.hasLastRunUtc = false;
+					cfg.dirty = true;
+				}
+			}
+
+			if (haveLast && c.minIntervalSeconds > 0) {
+				std::int64_t delta = now - lastEpoch;
+				if (delta >= 0 && delta < c.minIntervalSeconds) {
+					if (verbose) {
+						std::wcout << L"[skip] " << c.name << L": minIntervalSeconds not reached (" << delta
+							<< L"/" << c.minIntervalSeconds << L" sec)\n";
+					}
+					continue;
+				}
+			}
+
+			std::wcout << L"[run ] " << c.name << L"\n";
+
+			if (dryRun) {
+				std::wcout << L"       exe: " << c.exe << L"\n";
+				if (verbose && !c.args.empty()) {
+					std::wcout << L"       args:";
+					for (const auto& a : c.args) std::wcout << L" " << a;
+					std::wcout << L"\n";
+				}
+				continue;
+			}
+
+			std::int64_t startEpoch = ler::nowEpochSecondsUtc();
+			ler::RunResult rr = ler::runProcess(c.exe, c.args, c.workingDirectory, c.timeoutSeconds);
+
+			if (!rr.started) {
+				std::wcerr << L"[fail] " << c.name << L": CreateProcessW failed (error=" << rr.exitCode << L")\n";
+				overallExit = overallExit ? overallExit : 1;
+				continue;
+			}
+
+			if (rr.timedOut) {
+				std::wcerr << L"[fail] " << c.name << L": timed out; process terminated\n";
+				overallExit = overallExit ? overallExit : 1;
+			}
+			else if (rr.exitCode != 0) {
+				std::wcerr << L"[fail] " << c.name << L": exitCode=" << rr.exitCode << L"\n";
+				overallExit = overallExit ? overallExit : static_cast<int>(rr.exitCode);
+			}
+			else {
+				if (verbose) std::wcout << L"[ ok ] " << c.name << L": exitCode=0\n";
+			}
+
+			// Persist execution record (seconds precision).
+			c.hasLastRunUtc = true;
+			c.lastRunUtc = ler::formatEpochSecondsAsIsoUtc(startEpoch);
+			c.hasLastExitCode = true;
+			c.lastExitCode = rr.exitCode;
+			cfg.dirty = true;
+		}
+
+		if (cfg.dirty) {
+			ler::applyCommandsToJson(cfg);
+			ler::writeWStringToUtf8FileAtomic(configPath, ler::writeJson(cfg.root));
+		}
+
+		return overallExit;
+	}
+	catch (const std::exception& ex) {
+		std::string m = ex.what();
+		std::wcerr << L"Fatal: " << std::wstring(m.begin(), m.end()) << L"\n";
+		return 2;
+	}
 }

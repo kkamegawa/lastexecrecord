@@ -64,9 +64,18 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="CommandRunner.cpp" />
+    <ClCompile Include="Config.cpp" />
+    <ClCompile Include="FileUtil.cpp" />
+    <ClCompile Include="Json.cpp" />
+    <ClCompile Include="TimeUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="CommandRunner.h" />
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="FileUtil.h" />
+    <ClInclude Include="Json.h" />
+    <ClInclude Include="TimeUtil.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

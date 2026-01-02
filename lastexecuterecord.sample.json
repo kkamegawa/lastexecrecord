@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "localOnly": true,
+
+  "defaults": {
+    "minIntervalSeconds": 43200,
+    "timeoutSeconds": 60
+  },
+
+  "commands": [
+    {
+      "name": "whoami",
+      "enabled": true,
+      "exe": "C:\\Windows\\System32\\whoami.exe",
+      "args": ["/all"],
+      "workingDirectory": "",
+      "minIntervalSeconds": 3600
+    }
+  ]
+}
