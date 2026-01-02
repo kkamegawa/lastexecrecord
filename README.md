@@ -49,3 +49,47 @@ Example: `lastexecuterecord.sample.json`
 
 - The config uses `exe` + `args[]` and does not assume shell execution like `cmd.exe /c` (helps reduce injection risk).
 - To prevent concurrent runs, the program acquires an exclusive `<config>.lock` file.
+
+## Development
+
+### Building
+
+This project uses Visual Studio 2022 and can also be built with CMake.
+
+**Visual Studio:**
+```cmd
+Open src\lastexecrecord.sln in Visual Studio
+Build -> Build Solution
+```
+
+**CMake (with vcpkg):**
+```cmd
+vcpkg install
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+cmake --build build --config Debug
+```
+
+### Testing
+
+Unit tests are located in the `tests/` directory and use the doctest framework.
+
+**Run tests with CMake:**
+```cmd
+cd build
+ctest --output-on-failure
+```
+
+**Run tests directly:**
+```cmd
+build\tests\Debug\lastexecuterecord.tests.exe
+```
+
+See [tests/README.md](tests/README.md) for more details.
+
+### Documentation
+
+- [Unit Test Design (t_wada style)](docs/unit-test-design-twada.md)
+- [Handover Document](docs/handover.md)
+- [Implementation Map](docs/implementation-map.md)
+- [Config Schema](docs/config-schema.md)
+- [Security Notes](docs/security-notes.md)
