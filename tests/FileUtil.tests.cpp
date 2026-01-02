@@ -111,14 +111,7 @@ TEST_CASE("FileUtil: acquireLockFile creates lock") {
     CHECK(lock.h != INVALID_HANDLE_VALUE);
     
     // Try to acquire same lock (should fail)
-    bool secondLockFailed = false;
-    try {
-        ler::FileLock lock2 = ler::acquireLockFile(lockPath);
-    }
-    catch (...) {
-        secondLockFailed = true;
-    }
-    CHECK(secondLockFailed);
+    CHECK_THROWS(ler::acquireLockFile(lockPath));
     
     // Release lock (via destructor)
     lock = ler::FileLock();
