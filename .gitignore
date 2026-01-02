@@ -396,3 +396,17 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# CMake
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# vcpkg
+vcpkg_installed/
+
+# Test temporary files
+test_*.json
+test_*.lock
+test_*.txt
