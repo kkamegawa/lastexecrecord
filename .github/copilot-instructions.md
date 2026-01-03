@@ -146,8 +146,8 @@ Build -> Build Solution
 ```cmd
 msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64 /p:VcpkgTriplet=x64-windows
 msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgTriplet=x64-windows
-msbuild tests\lastexecrecord.tests.sln /p:Configuration=Debug /p:Platform=Arm64 /p:VcpkgTriplet=Arm64-windows
-msbuild tests\lastexecrecord.tests.sln /p:Configuration=Release /p:Platform=Arm64 /p:VcpkgTriplet=Arm64-windows
+msbuild tests\lastexecrecord.tests.sln /p:Configuration=Debug /p:Platform=Arm64 /p:VcpkgTriplet=arm64-windows
+msbuild tests\lastexecrecord.tests.sln /p:Configuration=Release /p:Platform=Arm64 /p:VcpkgTriplet=arm64-windows
 ```
 
 
