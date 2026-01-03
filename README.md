@@ -71,20 +71,15 @@ cmake --build build --config Debug
 
 ### Testing
 
-Unit tests are located in the `tests/` directory and use the doctest framework.
+Tests have been migrated to **Microsoft Unit Testing Framework for C++ (MSTest)**.
 
-**Run tests with CMake:**
-```cmd
-cd build
-ctest --output-on-failure
-```
+**Run tests in Visual Studio:**
+1. Open `src\lastexecrecord.sln` in Visual Studio
+2. Build the solution (Ctrl+Shift+B)
+3. Open Test Explorer (Test → Test Explorer)
+4. Click "Run All" to execute all tests
 
-**Run tests directly:**
-```cmd
-build\tests\Debug\lastexecuterecord.tests.exe
-```
-
-See [tests/README.md](tests/README.md) for more details.
+See `src/lastexecuterecord.mstest/` for the test project and [src/docs/MSTEST-MIGRATION.md](src/docs/MSTEST-MIGRATION.md) for migration details.
 
 ### Documentation
 

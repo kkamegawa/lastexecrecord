@@ -41,6 +41,4 @@ endif()
 
 # Testing has been migrated to MSTest in Visual Studio
 # See src/lastexecuterecord.mstest/ for the test project
-# CMake-based tests are no longer used
-# enable_testing()
-# add_subdirectory(tests)
+# The tests/ directory has been removed
