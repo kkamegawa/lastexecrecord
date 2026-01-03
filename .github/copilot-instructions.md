@@ -12,9 +12,9 @@
 
 - **Language**: C++17
 - **Platform**: Windows (primary target)
-- **Build Systems**: Visual Studio 2022, CMake
+- **Build Systems**: Visual Studio 2026, MSBuild
 - **Package Manager**: vcpkg
-- **Testing Framework**: doctest
+- **Testing Framework**: Microsoft Unit Testing Framework for C++
 - **Standard Library**: STL (prefer over third-party alternatives)
 - **API**: Win32 API (primary for Windows-specific operations)
 
@@ -102,9 +102,6 @@
    - No boost unless critical feature needed
    - No GPL-licensed dependencies
 
-### Current Dependencies
-- `doctest`: Testing framework (MIT license, dev only)
-
 ## Testing Practices
 
 ### Test Organization
@@ -139,24 +136,20 @@ TEST_CASE("ComponentName: descriptive test name") {
 
 ### Building the Project
 
-**Visual Studio 2022:**
+**Visual Studio 2026:**
 ```cmd
 Open src\lastexecrecord.sln
 Build -> Build Solution
 ```
 
-**CMake with vcpkg:**
+**msbuild with vcpkg:**
 ```cmd
-vcpkg install
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Debug
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64 /p:VcpkgTriplet=x64-windows
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgTriplet=x64-windows
+msbuild tests\lastexecrecord.tests.sln /p:Configuration=Debug /p:Platform=Arm64 /p:VcpkgTriplet=Arm64-windows
+msbuild tests\lastexecrecord.tests.sln /p:Configuration=Release /p:Platform=Arm64 /p:VcpkgTriplet=Arm64-windows
 ```
 
-### Running Tests
-```cmd
-cd build
-ctest --output-on-failure
-```
 
 ### Before Committing
 1. Build successfully with no warnings
