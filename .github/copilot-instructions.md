@@ -72,7 +72,7 @@
 ### Code Style
 - Use `#pragma once` for header guards
 - Namespace: `ler` (short for lastexecrecord)
-- Use `snake_case` for function names: `loadAndValidateConfig`
+- Use `camelCase` for function names: `loadAndValidateConfig`
 - Use `camelCase` for variable names: `configPath`, `dryRun`
 - Use `PascalCase` for types: `CommandConfig`, `JsonValue`
 - Use descriptive names; avoid abbreviations unless standard
