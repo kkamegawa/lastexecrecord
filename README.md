@@ -54,7 +54,7 @@ Example: `lastexecuterecord.sample.json`
 
 ### Building
 
-This project uses Visual Studio 2022 and can also be built with CMake.
+This project uses Visual Studio 2022/2025 or MSBuild.
 
 **Visual Studio:**
 ```cmd
@@ -62,11 +62,18 @@ Open src\lastexecrecord.sln in Visual Studio
 Build -> Build Solution
 ```
 
-**CMake (with vcpkg):**
+**MSBuild (command line):**
 ```cmd
-vcpkg install
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Debug
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64
+```
+
+For other platforms:
+```cmd
+REM Debug build for x64
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64
+
+REM Release build for ARM64
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=ARM64
 ```
 
 ### Testing
