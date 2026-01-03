@@ -61,13 +61,18 @@ struct JsonValue {
     bool isObject() const { return type == Type::Object; }
 
     // in-place builders for convenience
+    // Note: These methods reset the entire JsonValue state, clearing all internal containers
     void makeArray() {
         type = Type::Array;
+        s.clear();
         a.clear();
+        o.clear();
     }
 
     void makeObject() {
         type = Type::Object;
+        s.clear();
+        a.clear();
         o.clear();
     }
 
