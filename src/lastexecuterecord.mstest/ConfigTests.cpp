@@ -2,7 +2,7 @@
 #include "Config.h"
 #include "FileUtil.h"
 #include <Windows.h>
-#include <algorithm> // ’Ç‰Á
+#include <algorithm> // for std::find_if
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
