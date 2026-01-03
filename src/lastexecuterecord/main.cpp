@@ -1,4 +1,4 @@
-#include <Windows.h>
+﻿#include <Windows.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -12,6 +12,7 @@
 static void printUsage(const wchar_t* exeName) {
 	std::wcout
 		<< L"LastExecuteRecord - run commands from JSON config once per invocation\n\n"
+		<< L"Copyright (c) 2026 Kazushi Kamegawa\n\n"
 		<< L"Usage:\n"
 		<< L"  " << exeName << L" [--config <path>] [--dry-run] [--verbose]\n\n"
 		<< L"Options:\n"
@@ -24,6 +25,11 @@ int wmain(int argc, wchar_t* argv[]) {
 	bool dryRun = false;
 	bool verbose = false;
 	std::wstring configPath = ler::defaultConfigPath();
+
+	if (argc <= 1) {
+		printUsage(argv[0]);
+		return 0;
+	}
 
 	for (int i = 1; i < argc; i++) {
 		std::wstring a = argv[i];
