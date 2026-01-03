@@ -95,6 +95,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
@@ -115,22 +116,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="CommandRunner.cpp" />
-    <ClCompile Include="Config.cpp" />
-    <ClCompile Include="FileUtil.cpp" />
-    <ClCompile Include="Json.cpp" />
-    <ClCompile Include="TimeUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CommandRunner.h" />
-    <ClInclude Include="Config.h" />
-    <ClInclude Include="FileUtil.h" />
-    <ClInclude Include="Json.h" />
-    <ClInclude Include="TimeUtil.h" />
+    <ProjectReference Include="..\lastexecuterecord.core\lastexecuterecord.core.vcxproj">
+      <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

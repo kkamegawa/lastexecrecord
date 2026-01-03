@@ -54,7 +54,7 @@ Example: `lastexecuterecord.sample.json`
 
 ### Building
 
-This project uses Visual Studio 2022 and can also be built with CMake.
+This project uses Visual Studio 2022/2025 or MSBuild.
 
 **Visual Studio:**
 ```cmd
@@ -62,29 +62,31 @@ Open src\lastexecrecord.sln in Visual Studio
 Build -> Build Solution
 ```
 
-**CMake (with vcpkg):**
+**MSBuild (command line):**
 ```cmd
-vcpkg install
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Debug
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64
+```
+
+For other platforms:
+```cmd
+REM Debug build for x64
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64
+
+REM Release build for ARM64
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=ARM64
 ```
 
 ### Testing
 
-Unit tests are located in the `tests/` directory and use the doctest framework.
+Tests have been migrated to **Microsoft Unit Testing Framework for C++ (MSTest)**.
 
-**Run tests with CMake:**
-```cmd
-cd build
-ctest --output-on-failure
-```
+**Run tests in Visual Studio:**
+1. Open `src\lastexecrecord.sln` in Visual Studio
+2. Build the solution (Ctrl+Shift+B)
+3. Open Test Explorer (Test → Test Explorer)
+4. Click "Run All" to execute all tests
 
-**Run tests directly:**
-```cmd
-build\tests\Debug\lastexecuterecord.tests.exe
-```
-
-See [tests/README.md](tests/README.md) for more details.
+See `src/lastexecuterecord.mstest/` for the test project and [src/docs/MSTEST-MIGRATION.md](src/docs/MSTEST-MIGRATION.md) for migration details.
 
 ### Documentation
 

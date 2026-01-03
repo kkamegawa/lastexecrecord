@@ -60,6 +60,28 @@ struct JsonValue {
     bool isArray() const { return type == Type::Array; }
     bool isObject() const { return type == Type::Object; }
 
+    // in-place builders for convenience
+    // Note: These methods reset the entire JsonValue state, clearing all internal containers
+    void makeArray() {
+        type = Type::Array;
+        s.clear();
+        a.clear();
+        o.clear();
+    }
+
+    void makeObject() {
+        type = Type::Object;
+        s.clear();
+        a.clear();
+        o.clear();
+    }
+
+    void addItem(const JsonValue& item) {
+        if (type != Type::Array)
+            throw std::runtime_error("JsonValue is not an array");
+        a.push_back(item);
+    }
+
     const JsonValue* tryGet(const std::wstring& key) const;
     JsonValue* tryGet(const std::wstring& key);
 

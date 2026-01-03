@@ -39,6 +39,6 @@ else()
     target_compile_definitions(lastexecuterecord_lib PUBLIC LASTEXEC_STUB_WINDOWS)
 endif()
 
-# Enable testing
-enable_testing()
-add_subdirectory(tests)
+# Testing has been migrated to MSTest in Visual Studio
+# See src/lastexecuterecord.mstest/ for the test project
+# The tests/ directory has been removed

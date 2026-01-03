@@ -118,24 +118,25 @@ TEST_CASE("モジュール名: テストケースの説明") {
 
 ## ビルドとテスト実行
 
-### vcpkg によるdoctestインストール
+### Visual StudioでのMSTestビルドと実行
 
-```bash
-vcpkg install doctest
-```
+**注意**: テストフレームワークはMicrosoft Unit Testing Framework for C++ (MSTest) に移行されました。
 
-### CMakeによるビルド
+```cmd
+# Visual Studioでソリューションを開く
+start src\lastexecrecord.sln
 
-```bash
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=<vcpkg-root>/scripts/buildsystems/vcpkg.cmake
-cmake --build build
+# または MSBuild でビルド
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64
 ```
 
 ### テスト実行
 
-```bash
-./build/tests/lastexecuterecord.tests
-```
+Visual Studio:
+1. Test Explorer を開く (Test → Test Explorer)
+2. "Run All" をクリックしてテストを実行
+
+詳細は `src/docs/MSTEST-MIGRATION.md` を参照してください。
 
 ## 今後の改善案
 
