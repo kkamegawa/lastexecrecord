@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'af752f21c9d79ba3df9cb0250ce2233933f58486'
+
+    - name: Install dependencies
+      run: vcpkg install
+
+    - name: Determine version
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $tag = '${{ github.ref_name }}'
+        $version = $tag
+        if ($version.StartsWith('v')) {
+          $version = $version.Substring(1)
+        }
+
+        if ([string]::IsNullOrWhiteSpace($version)) {
+          throw "Version is empty (tag: '$tag')"
+        }
+
+        "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+    - name: Build (Release x64)
+      run: msbuild .\src\lastexecrecord.sln /m /p:Configuration=Release /p:Platform=x64
+
+    - name: Build (Release ARM64)
+      run: msbuild .\src\lastexecrecord.sln /m /p:Configuration=Release /p:Platform=ARM64
+
+    - name: Package (zip)
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        $workspace = $env:GITHUB_WORKSPACE
+        $dist = Join-Path $workspace 'dist'
+        New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+        $readmePath = Join-Path $workspace 'README.md'
+        if (-not (Test-Path $readmePath)) {
+          throw "README.md not found at $readmePath"
+        }
+
+        function New-PackageZip {
+          param(
+            [Parameter(Mandatory=$true)][string]$arch,
+            [Parameter(Mandatory=$true)][string]$platformFolder
+          )
+
+          $exe = Get-ChildItem -Path (Join-Path $workspace 'src') -Recurse -Filter 'lastexecuterecord.exe' |
+            Where-Object { $_.FullName -match "\\$platformFolder\\Release\\" } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "Executable not found for $arch (expected under src\\$platformFolder\\Release\\): lastexecuterecord.exe"
+          }
+
+          $stageDir = Join-Path $dist $arch
+          if (Test-Path $stageDir) {
+            Remove-Item -Recurse -Force $stageDir
+          }
+          New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+
+          Copy-Item -Path $exe.FullName -Destination (Join-Path $stageDir $exe.Name) -Force
+          Copy-Item -Path $readmePath -Destination (Join-Path $stageDir 'README.md') -Force
+
+          $zipName = "lastexec_${env:VERSION}_${arch}.zip"
+          $zipPath = Join-Path $dist $zipName
+          if (Test-Path $zipPath) {
+            Remove-Item -Force $zipPath
+          }
+
+          Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $zipPath
+        }
+
+        New-PackageZip -arch 'x64' -platformFolder 'x64'
+        New-PackageZip -arch 'arm64' -platformFolder 'ARM64'
+
+    - name: Publish GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*.zip
