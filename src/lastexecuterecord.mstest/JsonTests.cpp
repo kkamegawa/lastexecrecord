@@ -1,4 +1,4 @@
-#include "CppUnitTest.h"
+﻿#include "CppUnitTest.h"
 #include "Json.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -73,7 +73,7 @@ namespace lastexecuterecordmstest
 		TEST_METHOD(Write_SimpleObject_FormatsCorrectly)
 		{
 			ler::JsonValue root;
-			root.makeObject();
+			root = ler::JsonValue::makeObject(std::vector<std::pair<std::wstring, ler::JsonValue>>{});
 			root.o.emplace_back(L"name", ler::JsonValue::makeString(L"test"));
 			root.o.emplace_back(L"value", ler::JsonValue::makeInt(123));
 
@@ -88,7 +88,7 @@ namespace lastexecuterecordmstest
 		TEST_METHOD(Write_Array_FormatsCorrectly)
 		{
 			ler::JsonValue root;
-			root.makeArray();
+			root = ler::JsonValue::makeArray(std::vector<ler::JsonValue>{});
 			root.addItem(ler::JsonValue::makeInt(1));
 			root.addItem(ler::JsonValue::makeInt(2));
 			root.addItem(ler::JsonValue::makeInt(3));
