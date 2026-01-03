@@ -44,10 +44,10 @@ struct JsonValue {
     static JsonValue makeString(std::wstring v) {
         JsonValue x; x.type = Type::String; x.s = std::move(v); return x;
     }
-    static JsonValue makeArray(std::vector<JsonValue> v) {
+    static JsonValue makeArray(std::vector<JsonValue> v = {}) {
         JsonValue x; x.type = Type::Array; x.a = std::move(v); return x;
     }
-    static JsonValue makeObject(std::vector<std::pair<std::wstring, JsonValue>> v) {
+    static JsonValue makeObject(std::vector<std::pair<std::wstring, JsonValue>> v = {}) {
         JsonValue x; x.type = Type::Object; x.o = std::move(v); return x;
     }
 
