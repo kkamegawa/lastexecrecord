@@ -12,7 +12,7 @@
 static void printUsage(const wchar_t* exeName) {
 	std::wcout
 		<< L"LastExecuteRecord - run commands from JSON config once per invocation\n\n"
-		<< L"								Copyright (c) 2026 Kazushi Kamegawa\n\n"
+		<< L"Copyright (c) 2026 Kazushi Kamegawa\n\n"
 		<< L"Usage:\n"
 		<< L"  " << exeName << L" [--config <path>] [--dry-run] [--verbose]\n\n"
 		<< L"Options:\n"
