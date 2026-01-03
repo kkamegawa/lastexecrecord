@@ -44,10 +44,10 @@ struct JsonValue {
     static JsonValue makeString(std::wstring v) {
         JsonValue x; x.type = Type::String; x.s = std::move(v); return x;
     }
-    static JsonValue makeArray(std::vector<JsonValue> v = {}) {
+    static JsonValue makeArray(std::vector<JsonValue> v) {
         JsonValue x; x.type = Type::Array; x.a = std::move(v); return x;
     }
-    static JsonValue makeObject(std::vector<std::pair<std::wstring, JsonValue>> v = {}) {
+    static JsonValue makeObject(std::vector<std::pair<std::wstring, JsonValue>> v) {
         JsonValue x; x.type = Type::Object; x.o = std::move(v); return x;
     }
 
@@ -59,6 +59,27 @@ struct JsonValue {
     bool isString() const { return type == Type::String; }
     bool isArray() const { return type == Type::Array; }
     bool isObject() const { return type == Type::Object; }
+
+    // in-place builders for convenience
+    void makeArray() {
+        type = Type::Array;
+        a.clear();
+        o.clear();
+        s.clear();
+    }
+
+    void makeObject() {
+        type = Type::Object;
+        o.clear();
+        a.clear();
+        s.clear();
+    }
+
+    void addItem(const JsonValue& item) {
+        if (type != Type::Array)
+            throw std::runtime_error("JsonValue is not an array");
+        a.push_back(item);
+    }
 
     const JsonValue* tryGet(const std::wstring& key) const;
     JsonValue* tryGet(const std::wstring& key);

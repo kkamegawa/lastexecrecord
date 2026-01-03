@@ -15,6 +15,10 @@ std::wstring quoteArgForWindowsCommandLine(const std::wstring& arg) {
             break;
         }
     }
+    if (!needsQuotes && !arg.empty() && arg.back() == L'\\') {
+        // Trailing backslashes require quoting so they can be preserved correctly.
+        needsQuotes = true;
+    }
     if (!needsQuotes) return arg;
 
     std::wstring out;

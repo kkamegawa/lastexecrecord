@@ -74,8 +74,8 @@ namespace lastexecuterecordmstest
 		{
 			ler::JsonValue root;
 			root.makeObject();
-			root.addKey(L"name", ler::JsonValue::makeString(L"test"));
-			root.addKey(L"value", ler::JsonValue::makeInt(123));
+			root.o.emplace_back(L"name", ler::JsonValue::makeString(L"test"));
+			root.o.emplace_back(L"value", ler::JsonValue::makeInt(123));
 
 			std::wstring json = ler::writeJson(root);
 			// Should contain both keys

@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "FileUtil.h"
 #include <Windows.h>
+#include <algorithm> // ’Ç‰Á
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -115,7 +116,7 @@ namespace lastexecuterecordmstest
 			Assert::IsTrue(cfg.commands[0].hasLastRunUtc);
 			Assert::AreEqual(std::wstring(L"2026-01-02T12:34:56Z"), cfg.commands[0].lastRunUtc);
 			Assert::IsTrue(cfg.commands[0].hasLastExitCode);
-			Assert::AreEqual(0u, cfg.commands[0].lastExitCode);
+			Assert::AreEqual(0u, static_cast<unsigned int>(cfg.commands[0].lastExitCode));
 		}
 
 		TEST_METHOD(ApplyCommandsToJson_UpdatesJsonObject)
@@ -136,8 +137,14 @@ namespace lastexecuterecordmstest
 			ler::applyCommandsToJson(cfg);
 
 			// Verify the JSON object was updated
-			Assert::IsTrue(cfg.root.isObject());
-			Assert::IsTrue(cfg.root.hasKey(L"commands"));
+			Assert::IsTrue(
+				cfg.root.isObject() &&
+				std::find_if(
+					cfg.root.o.begin(),
+					cfg.root.o.end(),
+					[](const auto& kv) { return kv.first == L"commands"; }
+				) != cfg.root.o.end()
+			);
 		}
 	};
 }
