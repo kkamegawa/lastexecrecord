@@ -39,6 +39,8 @@ else()
     target_compile_definitions(lastexecuterecord_lib PUBLIC LASTEXEC_STUB_WINDOWS)
 endif()
 
-# Enable testing
-enable_testing()
-add_subdirectory(tests)
+# Testing has been migrated to MSTest in Visual Studio
+# See src/lastexecuterecord.mstest/ for the test project
+# CMake-based tests are no longer used
+# enable_testing()
+# add_subdirectory(tests)

@@ -1,33 +1,35 @@
 # Unit Tests for lastexecuterecord
 
-このディレクトリには、lastexecuterecord プロジェクトのユニットテストが含まれています。
+**注意: このディレクトリのCMakeベースのテストは非推奨となりました。**
 
-## テストフレームワーク
+## 現在のテストフレームワーク
 
-- **doctest**: ヘッダーオンリーの軽量テストフレームワーク
-- **vcpkg**: 依存関係管理
+テストは **Microsoft Unit Testing Framework for C++ (MSTest)** に移行されました。
 
-## テストファイル
+Visual Studioのテストプロジェクトを使用してください:
+- **場所**: `src/lastexecuterecord.mstest/`
+- **フレームワーク**: MSTest (Visual Studio 標準)
+- **依存関係**: なし（vcpkg不要）
+
+## テストの実行方法
+
+1. Visual Studio で `src/lastexecrecord.sln` を開く
+2. ソリューションをビルド (Ctrl+Shift+B)
+3. Test Explorer を開く (Test → Test Explorer)
+4. "Run All" をクリックしてテストを実行
+
+## このディレクトリについて
+
+このディレクトリのテストファイルは参考用に残されていますが、CMakeビルドからは除外されています。
+新しいテストは `src/lastexecuterecord.mstest/` に追加してください。
+
+### 参考ファイル
 
 - `TimeUtil.tests.cpp` - 時刻関連ユーティリティのテスト
 - `Json.tests.cpp` - JSONパーサー/ライターのテスト  
 - `CommandRunner.tests.cpp` - プロセス実行機能のテスト
 - `Config.tests.cpp` - 設定ファイル読み込みのテスト
 - `FileUtil.tests.cpp` - ファイルI/Oユーティリティのテスト
-
-## ビルド方法
-
-### 前提条件
-
-- Visual Studio 2022以降（Windows）
-- CMake 3.15以降
-- vcpkg
-
-### vcpkgによる依存関係のインストール
-
-```bash
-vcpkg install
-```
 
 ### CMakeを使用したビルド（Windows）
 
