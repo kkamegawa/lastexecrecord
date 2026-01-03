@@ -1,4 +1,4 @@
-#include <doctest/doctest.h>
+﻿#include <gtest/gtest.h>
 
 #include "TimeUtil.h"
 #include <chrono>
@@ -55,7 +55,7 @@ TEST_CASE("TimeUtil: tryParseIsoUtcToEpochSeconds handles epoch 0") {
     CHECK(epoch == 0);
 }
 
-TEST_CASE("TimeUtil: tryParseIsoUtcToEpochSeconds rejects invalid format") {
+TEST(TimeUtil, TryParseIsoUtcToEpochSeconds_RejectsInvalidFormat) {
     std::int64_t epoch = 0;
     
     SUBCASE("Empty string") {

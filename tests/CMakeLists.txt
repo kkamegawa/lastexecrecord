@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.15)
+﻿cmake_minimum_required(VERSION 3.15)
 
-# Find doctest
-find_package(doctest CONFIG REQUIRED)
+# Find GoogleTest
+find_package(GTest CONFIG REQUIRED)
 
 # Test sources
 set(TEST_SOURCES
@@ -18,13 +18,10 @@ add_executable(lastexecuterecord.tests ${TEST_SOURCES})
 target_link_libraries(lastexecuterecord.tests 
     PRIVATE 
     lastexecuterecord_lib
-    doctest::doctest
+    GTest::gtest
+    GTest::gmock
 )
 
 # Register tests with CTest
-include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake OPTIONAL)
-if(COMMAND doctest_discover_tests)
-    doctest_discover_tests(lastexecuterecord.tests)
-else()
-    add_test(NAME AllTests COMMAND lastexecuterecord.tests)
-endif()
+include(GoogleTest)
+gtest_discover_tests(lastexecuterecord.tests)

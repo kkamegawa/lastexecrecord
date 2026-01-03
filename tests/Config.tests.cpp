@@ -1,21 +1,21 @@
-#include <doctest/doctest.h>
+﻿#include <gtest/gtest.h>
 
 #include "Config.h"
 #include "FileUtil.h"
 
-TEST_CASE("Config: defaultConfigPath returns path based on module") {
+TEST(Config, DefaultConfigPath_ReturnsPathBasedOnModule) {
     std::wstring path = ler::defaultConfigPath();
     
     // Should not be empty
-    CHECK_FALSE(path.empty());
+    EXPECT_FALSE(path.empty());
     
     // Should end with .json
-    CHECK(path.find(L".json") != std::wstring::npos);
+    EXPECT_NE(path.find(L".json"), std::wstring::npos);
 }
 
 #ifndef LASTEXEC_STUB_WINDOWS
 
-TEST_CASE("Config: loadAndValidateConfig loads valid config") {
+TEST(Config, LoadAndValidateConfig_LoadsValidConfig) {
     // Create a temporary config file
     std::wstring configPath = L"test_config.json";
     std::wstring configContent = LR"({
@@ -40,21 +40,21 @@ TEST_CASE("Config: loadAndValidateConfig loads valid config") {
     // Load config
     ler::AppConfig config = ler::loadAndValidateConfig(configPath);
     
-    CHECK(config.version == 1);
-    CHECK(config.defaultMinIntervalSeconds == 60);
-    CHECK(config.defaultTimeoutSeconds == 300);
-    CHECK(config.commands.size() == 1);
-    CHECK(config.commands[0].name == L"Test Command");
-    CHECK(config.commands[0].enabled == true);
-    CHECK(config.commands[0].exe == L"cmd.exe");
-    CHECK(config.commands[0].args.size() == 2);
-    CHECK(config.commands[0].minIntervalSeconds == 30);
+    EXPECT_EQ(config.version, 1);
+    EXPECT_EQ(config.defaultMinIntervalSeconds, 60);
+    EXPECT_EQ(config.defaultTimeoutSeconds, 300);
+    ASSERT_EQ(config.commands.size(), 1u);
+    EXPECT_EQ(config.commands[0].name, L"Test Command");
+    EXPECT_TRUE(config.commands[0].enabled);
+    EXPECT_EQ(config.commands[0].exe, L"cmd.exe");
+    EXPECT_EQ(config.commands[0].args.size(), 2u);
+    EXPECT_EQ(config.commands[0].minIntervalSeconds, 30);
     
     // Cleanup
     DeleteFileW(configPath.c_str());
 }
 
-TEST_CASE("Config: loadAndValidateConfig applies defaults") {
+TEST(Config, LoadAndValidateConfig_AppliesDefaults) {
     std::wstring configPath = L"test_config_defaults.json";
     std::wstring configContent = LR"({
         "version": 1,
@@ -75,14 +75,15 @@ TEST_CASE("Config: loadAndValidateConfig applies defaults") {
     ler::AppConfig config = ler::loadAndValidateConfig(configPath);
     
     // Command should inherit defaults
-    CHECK(config.commands[0].minIntervalSeconds == 100);
-    CHECK(config.commands[0].timeoutSeconds == 200);
+    ASSERT_EQ(config.commands.size(), 1u);
+    EXPECT_EQ(config.commands[0].minIntervalSeconds, 100);
+    EXPECT_EQ(config.commands[0].timeoutSeconds, 200);
     
     // Cleanup
     DeleteFileW(configPath.c_str());
 }
 
-TEST_CASE("Config: loadAndValidateConfig handles optional fields") {
+TEST(Config, LoadAndValidateConfig_HandlesOptionalFields) {
     std::wstring configPath = L"test_config_optional.json";
     std::wstring configContent = LR"({
         "commands": [
@@ -98,45 +99,44 @@ TEST_CASE("Config: loadAndValidateConfig handles optional fields") {
     ler::AppConfig config = ler::loadAndValidateConfig(configPath);
     
     // Should have default version
-    CHECK(config.version == 1);
-    CHECK(config.commands.size() == 1);
-    CHECK(config.commands[0].name == L"Minimal Command");
-    CHECK(config.commands[0].enabled == true);  // default
+    EXPECT_EQ(config.version, 1);
+    ASSERT_EQ(config.commands.size(), 1u);
+    EXPECT_EQ(config.commands[0].name, L"Minimal Command");
+    EXPECT_TRUE(config.commands[0].enabled);  // default
     
     // Cleanup
     DeleteFileW(configPath.c_str());
 }
 
-TEST_CASE("Config: loadAndValidateConfig throws on missing required fields") {
-    std::wstring configPath = L"test_config_invalid.json";
-    
-    SUBCASE("Missing commands array") {
-        std::wstring configContent = LR"({"version": 1})";
-        ler::writeWStringToUtf8FileAtomic(configPath, configContent);
-        CHECK_THROWS(ler::loadAndValidateConfig(configPath));
-        DeleteFileW(configPath.c_str());
-    }
-    
-    SUBCASE("Command missing name") {
-        std::wstring configContent = LR"({
-            "commands": [{"exe": "test.exe"}]
-        })";
-        ler::writeWStringToUtf8FileAtomic(configPath, configContent);
-        CHECK_THROWS(ler::loadAndValidateConfig(configPath));
-        DeleteFileW(configPath.c_str());
-    }
-    
-    SUBCASE("Command missing exe") {
-        std::wstring configContent = LR"({
-            "commands": [{"name": "Test"}]
-        })";
-        ler::writeWStringToUtf8FileAtomic(configPath, configContent);
-        CHECK_THROWS(ler::loadAndValidateConfig(configPath));
-        DeleteFileW(configPath.c_str());
-    }
+TEST(Config, LoadAndValidateConfig_ThrowsWhenMissingCommandsArray) {
+    std::wstring configPath = L"test_config_invalid_missing_commands.json";
+    std::wstring configContent = LR"({"version": 1})";
+    ler::writeWStringToUtf8FileAtomic(configPath, configContent);
+    EXPECT_THROW((void)ler::loadAndValidateConfig(configPath), std::exception);
+    DeleteFileW(configPath.c_str());
 }
 
-TEST_CASE("Config: loadAndValidateConfig preserves execution history") {
+TEST(Config, LoadAndValidateConfig_ThrowsWhenCommandMissingName) {
+    std::wstring configPath = L"test_config_invalid_missing_name.json";
+    std::wstring configContent = LR"({
+            "commands": [{"exe": "test.exe"}]
+        })";
+    ler::writeWStringToUtf8FileAtomic(configPath, configContent);
+    EXPECT_THROW((void)ler::loadAndValidateConfig(configPath), std::exception);
+    DeleteFileW(configPath.c_str());
+}
+
+TEST(Config, LoadAndValidateConfig_ThrowsWhenCommandMissingExe) {
+    std::wstring configPath = L"test_config_invalid_missing_exe.json";
+    std::wstring configContent = LR"({
+            "commands": [{"name": "Test"}]
+        })";
+    ler::writeWStringToUtf8FileAtomic(configPath, configContent);
+    EXPECT_THROW((void)ler::loadAndValidateConfig(configPath), std::exception);
+    DeleteFileW(configPath.c_str());
+}
+
+TEST(Config, LoadAndValidateConfig_PreservesExecutionHistory) {
     std::wstring configPath = L"test_config_history.json";
     std::wstring configContent = LR"({
         "commands": [
@@ -153,16 +153,17 @@ TEST_CASE("Config: loadAndValidateConfig preserves execution history") {
     
     ler::AppConfig config = ler::loadAndValidateConfig(configPath);
     
-    CHECK(config.commands[0].hasLastRunUtc);
-    CHECK(config.commands[0].lastRunUtc == L"2026-01-02T12:34:56Z");
-    CHECK(config.commands[0].hasLastExitCode);
-    CHECK(config.commands[0].lastExitCode == 0);
+    ASSERT_EQ(config.commands.size(), 1u);
+    EXPECT_TRUE(config.commands[0].hasLastRunUtc);
+    EXPECT_EQ(config.commands[0].lastRunUtc, L"2026-01-02T12:34:56Z");
+    EXPECT_TRUE(config.commands[0].hasLastExitCode);
+    EXPECT_EQ(config.commands[0].lastExitCode, 0);
     
     // Cleanup
     DeleteFileW(configPath.c_str());
 }
 
-TEST_CASE("Config: applyCommandsToJson updates JSON") {
+TEST(Config, ApplyCommandsToJson_UpdatesJson) {
     std::wstring configPath = L"test_config_update.json";
     std::wstring configContent = LR"({
         "commands": [
@@ -189,17 +190,17 @@ TEST_CASE("Config: applyCommandsToJson updates JSON") {
     
     // Check that JSON was updated
     auto* commands = config.root.tryGet(L"commands");
-    REQUIRE(commands != nullptr);
-    REQUIRE(commands->isArray());
-    REQUIRE(commands->a.size() > 0);
+    ASSERT_NE(commands, nullptr);
+    ASSERT_TRUE(commands->isArray());
+    ASSERT_GT(commands->a.size(), 0u);
     
     auto* lastRunUtc = commands->a[0].tryGet(L"lastRunUtc");
-    REQUIRE(lastRunUtc != nullptr);
-    CHECK(lastRunUtc->s == L"2026-01-02T12:34:56Z");
+    ASSERT_NE(lastRunUtc, nullptr);
+    EXPECT_EQ(lastRunUtc->s, L"2026-01-02T12:34:56Z");
     
     auto* lastExitCode = commands->a[0].tryGet(L"lastExitCode");
-    REQUIRE(lastExitCode != nullptr);
-    CHECK(lastExitCode->i == 0);
+    ASSERT_NE(lastExitCode, nullptr);
+    EXPECT_EQ(lastExitCode->i, 0);
     
     // Cleanup
     DeleteFileW(configPath.c_str());
@@ -207,11 +208,11 @@ TEST_CASE("Config: applyCommandsToJson updates JSON") {
 
 #else
 // Stub tests for non-Windows platforms
-TEST_CASE("Config: Config tests stubbed on non-Windows") {
-    WARN("Config tests are only available on Windows");
+TEST(Config, StubbedOnNonWindows) {
+    GTEST_SKIP() << "Config tests are only available on Windows";
     
     // Still test the defaultConfigPath as it should work cross-platform
     std::wstring path = ler::defaultConfigPath();
-    CHECK_FALSE(path.empty());
+    EXPECT_FALSE(path.empty());
 }
 #endif
