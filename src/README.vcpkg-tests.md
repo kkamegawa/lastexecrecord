@@ -1,30 +1,22 @@
-﻿# Running tests (Visual Studio + vcpkg)
+﻿# Running tests (Visual Studio with MSTest)
 
 ## Prerequisites
 
-- Visual Studio 2022/2026 with C++ workload
-- vcpkg installed and available on PATH
-
-## One-time setup
-
-From `src/`:
-
-1. Install dependencies in manifest mode:
-
-```powershell
-vcpkg install --triplet x64-windows
-```
-
-2. Enable MSBuild integration (so `#include <gtest/gtest.h>` and linking works automatically):
-
-```powershell
-vcpkg integrate install
-```
+- Visual Studio 2022/2025 with C++ workload
+- Microsoft Unit Testing Framework for C++ (included with Visual Studio)
 
 ## Build and run
 
 - Open `src/lastexecrecord.sln`.
-- Build `lastexecuterecord.tests`.
-- Open **Test Explorer** and run tests.
+- Build the solution (includes `lastexecuterecord`, `lastexecuterecord.core`, and `lastexecuterecord.mstest`).
+- Open **Test Explorer** (Test → Test Explorer).
+- Tests will automatically appear and can be run directly from Test Explorer.
 
-If tests do not appear, ensure that **GoogleTest Adapter** is installed/enabled in Visual Studio.
+No external dependencies (vcpkg, GoogleTest, etc.) are required.
+
+## Project structure
+
+- `lastexecuterecord`: Main executable (contains only `main.cpp`)
+- `lastexecuterecord.core`: Static library with core functionality (TimeUtil, Json, Config, FileUtil, CommandRunner)
+- `lastexecuterecord.mstest`: Native Unit Test Project using Microsoft Unit Testing Framework for C++
+
