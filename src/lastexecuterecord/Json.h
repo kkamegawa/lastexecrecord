@@ -64,15 +64,11 @@ struct JsonValue {
     void makeArray() {
         type = Type::Array;
         a.clear();
-        o.clear();
-        s.clear();
     }
 
     void makeObject() {
         type = Type::Object;
         o.clear();
-        a.clear();
-        s.clear();
     }
 
     void addItem(const JsonValue& item) {
