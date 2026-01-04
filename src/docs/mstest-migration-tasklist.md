@@ -5,13 +5,12 @@
 前提:
 - 対象ソリューション: `src/lastexecrecord.sln`
 - 本体プロジェクト: `src/lastexecuterecord/lastexecuterecord.vcxproj`
-- 既存テスト: `src/lastexecuterecord.tests/`（GoogleTest）および `tests/`（CMake 経由）
+- 既存テスト: `src/lastexecuterecord.mstest/`（MSTest）
 
 ---
 
 ## 1. 事前整理
 
-- [ ] `tests/`（CMake 側）を今後どう扱うか決める（削除/凍結/別運用）
 - [ ] `vcpkg.json` の `gtest` 依存を削除してよいか決める（テスト用途のみなら削除）
 
 ---
@@ -106,12 +105,11 @@
 
 ---
 
-## 5. GoogleTest / vcpkg 依存の撤去
+## 5. テスト環境整備
 
 - [ ] `src/lastexecuterecord.tests/`（GoogleTest）をソリューションから除外 or 削除
 - [ ] `README.vcpkg-tests.md` を更新・削除（vcpkg が不要なら削除、必要なら用途を明確化）
 - [ ] `vcpkg.json` から `gtest` を削除（テスト用途のみなら）
-- [ ] `tests/`（CMake テスト）を凍結する場合は README に明記
 
 ---
 
