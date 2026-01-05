@@ -16,7 +16,7 @@ static void printUsage(const wchar_t* exeName) {
 		<< L"Usage:\n"
 		<< L"  " << exeName << L" [--config <path>] [--dry-run] [--verbose]\n\n"
 		<< L"Options:\n"
-		<< L"  --config <path>  Path to config JSON (default: <exe>.json)\n"
+		<< L"  --config <path>  Path to config JSON (default: %USERPROFILE%\\.lastexecrecord\\config.json)\n"
 		<< L"  --dry-run        Do not execute; only show decisions\n"
 		<< L"  --verbose        Print skip reasons and detailed output\n";
 }
@@ -60,6 +60,9 @@ int wmain(int argc, wchar_t* argv[]) {
 	}
 
 	try {
+		// Auto-generate a sample config once (do not overwrite) to improve onboarding.
+		ler::ensureSampleConfigExists(configPath);
+
 		// Prevent concurrent runs against the same config file.
 		ler::FileLock lock = ler::acquireLockFile(configPath + L".lock");
 

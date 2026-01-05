@@ -42,6 +42,11 @@ struct AppConfig {
 AppConfig loadAndValidateConfig(const std::wstring& configPath);
 std::wstring defaultConfigPath();
 
+// Creates a minimal, safe sample configuration file if missing.
+// - Does not overwrite existing files.
+// - Creates parent directory as needed.
+void ensureSampleConfigExists(const std::wstring& configPath);
+
 // Update root JSON based on commands[].lastRunUtc/lastExitCode changes
 void applyCommandsToJson(AppConfig& cfg);
 
