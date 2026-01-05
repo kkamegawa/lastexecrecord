@@ -10,17 +10,22 @@ It avoids external libraries (Win32 API + STL only) and focuses on safe operatio
 
 ## Quick start
 
-1. Copy `lastexecuterecord.sample.json` to `lastexecuterecord.json`
-2. Edit `exe` / `args` to match your commands
-3. Run `lastexecuterecord.exe`
+1. Run `lastexecuterecord.exe` (no arguments needed)
+2. The app creates a sample config at `%USERPROFILE%\.lastexecrecord\config.json`
+3. Edit the config file: set `enabled: true` and customize `exe` / `args` for your commands
+4. Run `lastexecuterecord.exe` again to execute your commands
 
-By default, the app reads **`<exe>.json`** (for example, `lastexecuterecord.json`).
+By default, the app reads **`%USERPROFILE%\.lastexecrecord\config.json`**.
+If this file doesn't exist, a minimal sample config is created automatically (with commands disabled by default for safety).
 
 ## Usage
 
-- `lastexecuterecord.exe --config <path>`: Specify the config JSON
+- `lastexecuterecord.exe`: Run with default config (auto-creates sample if missing)
+- `lastexecuterecord.exe --config <path>`: Specify a custom config JSON path
 - `lastexecuterecord.exe --dry-run`: Do not execute; only show decisions
 - `lastexecuterecord.exe --verbose`: Verbose logs (including skip reasons)
+
+All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose`
 
 ## Config schema (version 1)
 
