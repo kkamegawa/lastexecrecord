@@ -16,7 +16,7 @@ static void printUsage(const wchar_t* exeName) {
 		<< L"Usage:\n"
 		<< L"  " << exeName << L" [--config <path>] [--dry-run] [--verbose]\n\n"
 		<< L"Options:\n"
-		<< L"  --config <path>  Path to config JSON (default: <exe>.json)\n"
+		<< L"  --config <path>  Path to config JSON (default: %USERPROFILE%\\.lastexecrecord\\config.json)\n"
 		<< L"  --dry-run        Do not execute; only show decisions\n"
 		<< L"  --verbose        Print skip reasons and detailed output\n";
 }
@@ -26,40 +26,41 @@ int wmain(int argc, wchar_t* argv[]) {
 	bool verbose = false;
 	std::wstring configPath = ler::defaultConfigPath();
 
-	if (argc <= 1) {
-		printUsage(argv[0]);
-		return 0;
-	}
-
-	for (int i = 1; i < argc; i++) {
-		std::wstring a = argv[i];
-		if (a == L"--help" || a == L"-h" || a == L"/?") {
-			printUsage(argv[0]);
-			return 0;
-		}
-		if (a == L"--dry-run") {
-			dryRun = true;
-			continue;
-		}
-		if (a == L"--verbose") {
-			verbose = true;
-			continue;
-		}
-		if (a == L"--config") {
-			if (i + 1 >= argc) {
-				std::wcerr << L"--config requires a path\n";
-				return 2;
+	// Parse arguments (skip if argc <= 1, i.e., no arguments provided)
+	if (argc > 1) {
+		for (int i = 1; i < argc; i++) {
+			std::wstring a = argv[i];
+			if (a == L"--help" || a == L"-h" || a == L"/?") {
+				printUsage(argv[0]);
+				return 0;
 			}
-			configPath = argv[++i];
-			continue;
-		}
+			if (a == L"--dry-run") {
+				dryRun = true;
+				continue;
+			}
+			if (a == L"--verbose") {
+				verbose = true;
+				continue;
+			}
+			if (a == L"--config") {
+				if (i + 1 >= argc) {
+					std::wcerr << L"--config requires a path\n";
+					return 2;
+				}
+				configPath = argv[++i];
+				continue;
+			}
 
-		std::wcerr << L"Unknown argument: " << a << L"\n";
-		printUsage(argv[0]);
-		return 2;
+			std::wcerr << L"Unknown argument: " << a << L"\n";
+			printUsage(argv[0]);
+			return 2;
+		}
 	}
 
 	try {
+		// Auto-generate a sample config once (do not overwrite) to improve onboarding.
+		ler::ensureSampleConfigExists(configPath);
+
 		// Prevent concurrent runs against the same config file.
 		ler::FileLock lock = ler::acquireLockFile(configPath + L".lock");
 
