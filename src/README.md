@@ -15,5 +15,14 @@ The `lastexecuterecord` project includes:
 The application reads a JSON config and, on each invocation, executes registered commands sequentially.
 It records the last execution time (seconds precision) back into the config and enforces a minimum interval to skip runs.
 
+## Configuration file
+
+By default, the application loads its configuration from:
+
+- `%USERPROFILE%\.lastexecrecord\config.json`
+
+On startup, if the config file does not exist, a minimal sample config is created automatically in the same directory.
+The sample is safe by default (its example command is disabled) and will not overwrite an existing config.
+
 This structure is designed to facilitate easy navigation and understanding of the project's components and configuration.
 

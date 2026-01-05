@@ -10,6 +10,50 @@ static std::runtime_error win32Error(const char* msg) {
     return std::runtime_error(std::string(msg) + " (GetLastError=" + std::to_string(e) + ")");
 }
 
+std::wstring getEnvVar(const wchar_t* name) {
+    DWORD n = GetEnvironmentVariableW(name, nullptr, 0);
+    if (n == 0) {
+        DWORD e = GetLastError();
+        if (e == ERROR_ENVVAR_NOT_FOUND) return L"";
+        throw win32Error("GetEnvironmentVariableW failed");
+    }
+    std::wstring v;
+    v.resize(n);
+    DWORD r = GetEnvironmentVariableW(name, &v[0], n);
+    if (r == 0) throw win32Error("GetEnvironmentVariableW failed");
+    if (!v.empty() && v.back() == L'\0') v.pop_back();
+    return v;
+}
+
+bool fileExists(const std::wstring& path) {
+    DWORD a = GetFileAttributesW(path.c_str());
+    if (a == INVALID_FILE_ATTRIBUTES) return false;
+    return (a & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
+static bool directoryExists(const std::wstring& path) {
+    DWORD a = GetFileAttributesW(path.c_str());
+    if (a == INVALID_FILE_ATTRIBUTES) return false;
+    return (a & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+void ensureDirectoryExists(const std::wstring& path) {
+    if (path.empty()) return;
+    if (directoryExists(path)) return;
+
+    // Create parent first
+    std::wstring parent = getDirectoryName(path);
+    if (!parent.empty() && parent != path) {
+        ensureDirectoryExists(parent);
+    }
+
+    if (!CreateDirectoryW(path.c_str(), nullptr)) {
+        DWORD e = GetLastError();
+        if (e == ERROR_ALREADY_EXISTS && directoryExists(path)) return;
+        throw win32Error("CreateDirectoryW failed");
+    }
+}
+
 std::wstring getModulePath() {
     std::wstring buf;
     buf.resize(32768);

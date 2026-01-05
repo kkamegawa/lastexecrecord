@@ -46,7 +46,52 @@ static void upsertObjectField(JsonValue& obj, const std::wstring& key, JsonValue
     obj.o.push_back(std::make_pair(key, std::move(value)));
 }
 
+static std::wstring sampleConfigText() {
+    // Minimal and safe: default command is disabled.
+    std::wstring s;
+    s += L"{\n";
+    s += L"  \"version\": 1,\n";
+    s += L"  \"defaults\": {\n";
+    s += L"    \"minIntervalSeconds\": 0,\n";
+    s += L"    \"timeoutSeconds\": 0\n";
+    s += L"  },\n";
+    s += L"  \"commands\": [\n";
+    s += L"    {\n";
+    s += L"      \"name\": \"example (disabled)\",\n";
+    s += L"      \"enabled\": false,\n";
+    s += L"      \"exe\": \"C:\\\\Windows\\\\System32\\\\cmd.exe\",\n";
+    s += L"      \"args\": [\"/c\", \"echo Hello from LastExecuteRecord\"]\n";
+    s += L"    }\n";
+    s += L"  ]\n";
+    s += L"}\n";
+    return s;
+}
+
+void ensureSampleConfigExists(const std::wstring& configPath) {
+    if (fileExists(configPath)) return;
+
+    std::wstring dir = getDirectoryName(configPath);
+    if (dir.empty()) {
+        throw std::runtime_error("Config path has no directory component");
+    }
+
+    ensureDirectoryExists(dir);
+
+    // Re-check after creating directory to avoid overwriting if another process wrote it.
+    if (fileExists(configPath)) return;
+
+    // Atomic write will replace, so only do it if still missing.
+    writeWStringToUtf8FileAtomic(configPath, sampleConfigText());
+}
+
 std::wstring defaultConfigPath() {
+    std::wstring profile = getEnvVar(L"USERPROFILE");
+    if (!profile.empty()) {
+        std::wstring dir = joinPath(profile, L".lastexecrecord");
+        return joinPath(dir, L"config.json");
+    }
+
+    // fallback (legacy behavior)
     return changeExtension(getModulePath(), L".json");
 }
 

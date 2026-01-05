@@ -10,6 +10,11 @@ std::wstring changeExtension(const std::wstring& path, const std::wstring& extWi
 std::wstring getDirectoryName(const std::wstring& path);
 std::wstring joinPath(const std::wstring& dir, const std::wstring& leaf);
 
+// Win32 helpers
+std::wstring getEnvVar(const wchar_t* name);
+bool fileExists(const std::wstring& path);
+void ensureDirectoryExists(const std::wstring& path);
+
 // UTF-8 file IO (accepts UTF-8 with/without BOM)
 std::wstring readUtf8FileToWString(const std::wstring& path);
 void writeWStringToUtf8FileAtomic(const std::wstring& path, const std::wstring& content);
