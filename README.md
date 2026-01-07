@@ -27,6 +27,34 @@ If this file doesn't exist, a minimal sample config is created automatically (wi
 
 All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose`
 
+### Windows Terminal Profile Setup
+
+To register `lastexecuterecord.exe` as a Windows Terminal profile and continue running PowerShell or Command Prompt after execution, add the following profile to your Windows Terminal `settings.json`:
+
+```json
+{
+  "profiles": {
+    "list": [
+      {
+        "name": "lastexecrecord + PowerShell",
+        "commandline": "cmd.exe /c lastexecuterecord.exe && pwsh.exe",
+        "icon": "ms-appx:///ProfileIcons/PowerShell.png"
+      },
+      {
+        "name": "lastexecrecord + Command Prompt",
+        "commandline": "cmd.exe /c lastexecuterecord.exe && cmd.exe",
+        "icon": "ms-appx:///ProfileIcons/CommandPrompt.png"
+      }
+    ]
+  }
+}
+```
+
+- `&&` executes the next shell only if `lastexecuterecord.exe` exits successfully
+- Use `;` instead of `&&` if you want to continue regardless of exit code: `cmd.exe /c lastexecuterecord.exe ; pwsh.exe`
+
+To edit `settings.json`, open Windows Terminal and press `Ctrl + ,` or click the Settings icon.
+
 ## Config schema (version 1)
 
 Example: `lastexecuterecord.sample.json`
@@ -50,10 +78,37 @@ Example: `lastexecuterecord.sample.json`
 - `lastRunUtc` (string, optional): Example `2026-01-02T12:34:56Z` (seconds precision)
 - `lastExitCode` (number, optional): Previous exit code
 
+### sample(winget)
+
+```json
+{
+  "version": 1,
+  "defaults": {
+    "minIntervalSeconds": 64800,
+    "timeoutSeconds": 0
+  },
+  "commands": [
+    {
+      "name": "winget",
+      "enabled": true,
+      "exe": "c:\\windows\\system32\\sudo.exe",
+      "args": [
+        "winget",
+        "upgrade",
+        "--all",
+        "--accept-package-agreements",
+        "--silent"
+      ]
+    }
+  ]
+}
+```
+
 ## Notes (security)
 
 - The config uses `exe` + `args[]` and does not assume shell execution like `cmd.exe /c` (helps reduce injection risk).
 - To prevent concurrent runs, the program acquires an exclusive `<config>.lock` file.
+- **DO NOT** use environment variables or user input to construct `exe` or `args` in the config file, as this may lead to command injection vulnerabilities.
 
 ## Development
 
