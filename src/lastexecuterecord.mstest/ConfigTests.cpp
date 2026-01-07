@@ -31,9 +31,125 @@ namespace lastexecuterecordmstest
 		~TempFile() { DeleteFileW(path.c_str()); }
 	};
 
+	// RAII helper for temp directories
+	class TempDirectory {
+	public:
+		std::wstring path;
+		explicit TempDirectory(const wchar_t* leaf) : path(makeTempPath(leaf)) {}
+		~TempDirectory() {
+			// Delete all files in directory first
+			WIN32_FIND_DATAW findData;
+			std::wstring searchPath = path + L"\\*";
+			HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+			if (hFind != INVALID_HANDLE_VALUE) {
+				do {
+					if (wcscmp(findData.cFileName, L".") != 0 && wcscmp(findData.cFileName, L"..") != 0) {
+						std::wstring filePath = path + L"\\" + findData.cFileName;
+						DeleteFileW(filePath.c_str());
+					}
+				} while (FindNextFileW(hFind, &findData));
+				FindClose(hFind);
+			}
+			RemoveDirectoryW(path.c_str());
+		}
+	};
+
 	TEST_CLASS(ConfigTests)
 	{
 	public:
+		TEST_METHOD(DefaultConfigPath_ReturnsUserProfilePath)
+		{
+			std::wstring path = ler::defaultConfigPath();
+			
+			// Should contain .lastexecrecord and config.json
+			Assert::IsTrue(path.find(L".lastexecrecord") != std::wstring::npos);
+			Assert::IsTrue(path.find(L"config.json") != std::wstring::npos);
+			
+			// If USERPROFILE is set, path should start with it
+			std::wstring userProfile = ler::getEnvVar(L"USERPROFILE");
+			if (!userProfile.empty()) {
+				Assert::IsTrue(path.find(userProfile) == 0);
+			}
+		}
+
+		TEST_METHOD(EnsureSampleConfigExists_CreatesDirectoryAndFile)
+		{
+			TempDirectory tempDir(L"configtest_dir");
+			std::wstring configPath = ler::joinPath(tempDir.path, L"config.json");
+			
+			// Verify directory doesn't exist initially
+			DWORD attrs = GetFileAttributesW(tempDir.path.c_str());
+			Assert::IsTrue(attrs == INVALID_FILE_ATTRIBUTES);
+			
+			// Call ensureSampleConfigExists
+			ler::ensureSampleConfigExists(configPath);
+			
+			// Verify directory was created
+			attrs = GetFileAttributesW(tempDir.path.c_str());
+			Assert::IsTrue(attrs != INVALID_FILE_ATTRIBUTES);
+			Assert::IsTrue((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0);
+			
+			// Verify config file was created
+			Assert::IsTrue(ler::fileExists(configPath));
+			
+			// Verify config file has valid content
+			ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
+			Assert::AreEqual(1LL, cfg.version);
+		}
+
+		TEST_METHOD(EnsureSampleConfigExists_DoesNotOverwriteExisting)
+		{
+			TempDirectory tempDir(L"configtest_nooverwrite");
+			std::wstring configPath = ler::joinPath(tempDir.path, L"config.json");
+			
+			// Create directory manually
+			CreateDirectoryW(tempDir.path.c_str(), nullptr);
+			
+			// Write custom config
+			std::wstring customContent = 
+				L"{\n"
+				L"  \"version\": 1,\n"
+				L"  \"commands\": [\n"
+				L"    { \"name\": \"custom\", \"exe\": \"test.exe\" }\n"
+				L"  ]\n"
+				L"}\n";
+			ler::writeWStringToUtf8FileAtomic(configPath, customContent);
+			
+			// Call ensureSampleConfigExists
+			ler::ensureSampleConfigExists(configPath);
+			
+			// Verify original content is preserved
+			ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(std::wstring(L"custom"), cfg.commands[0].name);
+		}
+
+		TEST_METHOD(EnsureSampleConfigExists_CreatesNestedDirectories)
+		{
+			TempDirectory tempBaseDir(L"configtest_base");
+			std::wstring nestedDir = ler::joinPath(tempBaseDir.path, L"level1");
+			nestedDir = ler::joinPath(nestedDir, L"level2");
+			std::wstring configPath = ler::joinPath(nestedDir, L"config.json");
+			
+			// Call ensureSampleConfigExists
+			ler::ensureSampleConfigExists(configPath);
+			
+			// Verify all nested directories were created
+			DWORD attrs = GetFileAttributesW(nestedDir.c_str());
+			Assert::IsTrue(attrs != INVALID_FILE_ATTRIBUTES);
+			Assert::IsTrue((attrs & FILE_ATTRIBUTE_DIRECTORY) != 0);
+			
+			// Verify config file was created
+			Assert::IsTrue(ler::fileExists(configPath));
+			
+			// Cleanup nested directories
+			DeleteFileW(configPath.c_str());
+			std::wstring level2 = nestedDir;
+			std::wstring level1 = ler::getDirectoryName(level2);
+			RemoveDirectoryW(level2.c_str());
+			RemoveDirectoryW(level1.c_str());
+		}
+
 		TEST_METHOD(Load_MinimalValidConfig_ReturnsCommands)
 		{
 			TempFile tmp(L"minimal.json");
