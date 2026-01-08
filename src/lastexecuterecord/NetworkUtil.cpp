@@ -95,7 +95,10 @@ bool shouldExecuteBasedOnNetwork(NetworkOption option) {
             
         case NetworkOption::ExecuteWhenConnected: {
             // Execute only if connected and NOT metered
-            // Optimize by checking connection and metered status together
+            // Note: This optimizes by combining connectivity and metered checks in a single
+            // COM initialization, avoiding redundant API calls compared to calling
+            // hasInternetConnection() + isConnectionMetered() separately.
+            
             // Initialize COM for this thread if not already initialized
             HRESULT hrInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
             bool comInitialized = (hrInit == S_OK);
