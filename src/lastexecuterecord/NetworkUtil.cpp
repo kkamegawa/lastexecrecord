@@ -60,51 +60,18 @@ bool isConnectionMetered() {
     
     bool isMetered = false;
     if (SUCCEEDED(hr)) {
-        // Get all network connections
-        ComPtr<IEnumNetworkConnections> pEnumConnections;
-        hr = pNetworkListManager->GetNetworkConnections(pEnumConnections.GetAddressOf());
+        // Use INetworkCostManager to check cost
+        ComPtr<INetworkCostManager> pCostManager;
+        hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager,
+                                                 reinterpret_cast<void**>(pCostManager.GetAddressOf()));
         
         if (SUCCEEDED(hr)) {
-            ComPtr<INetworkConnection> pConnection;
-            ULONG fetched = 0;
+            DWORD costFlags = 0;
+            hr = pCostManager->GetCost(&costFlags, nullptr);
             
-            // Check each connection
-            while (pEnumConnections->Next(1, pConnection.GetAddressOf(), &fetched) == S_OK && fetched > 0) {
-                VARIANT_BOOL isConnected = VARIANT_FALSE;
-                pConnection->get_IsConnected(&isConnected);
-                
-                if (isConnected == VARIANT_TRUE) {
-                    // Get the network associated with this connection
-                    ComPtr<INetwork> pNetwork;
-                    hr = pConnection->GetNetwork(pNetwork.GetAddressOf());
-                    
-                    if (SUCCEEDED(hr)) {
-                        // On Windows 8+, we can use INetworkCostManager
-                        ComPtr<INetworkCostManager> pCostManager;
-                        hr = CoCreateInstance(
-                            CLSID_NetworkListManager,
-                            nullptr,
-                            CLSCTX_ALL,
-                            IID_INetworkCostManager,
-                            reinterpret_cast<void**>(pCostManager.GetAddressOf())
-                        );
-                        
-                        if (SUCCEEDED(hr)) {
-                            DWORD costFlags = 0;
-                            hr = pCostManager->GetCost(&costFlags, nullptr);
-                            
-                            if (SUCCEEDED(hr)) {
-                                // Check if connection is NOT unrestricted (meaning it's metered)
-                                if (costFlags != NLM_CONNECTION_COST_UNRESTRICTED) {
-                                    isMetered = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                pConnection.Reset();
+            if (SUCCEEDED(hr)) {
+                // Check if connection is NOT unrestricted (meaning it's metered)
+                isMetered = (costFlags != NLM_CONNECTION_COST_UNRESTRICTED);
             }
         }
     }
