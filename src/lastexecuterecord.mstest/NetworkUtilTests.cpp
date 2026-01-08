@@ -8,22 +8,20 @@ namespace lastexecuterecordmstest
 	TEST_CLASS(NetworkUtilTests)
 	{
 	public:
-		TEST_METHOD(HasInternetConnection_ReturnsBoolean)
+		TEST_METHOD(HasInternetConnection_DoesNotCrash)
 		{
-			// This test just verifies the function doesn't crash
+			// This test verifies the function doesn't crash or throw
 			// Actual return value depends on system state
 			bool result = ler::hasInternetConnection();
-			// Should return either true or false, not crash
-			Assert::IsTrue(result == true || result == false);
+			(void)result; // Suppress unused variable warning
 		}
 
-		TEST_METHOD(IsConnectionMetered_ReturnsBoolean)
+		TEST_METHOD(IsConnectionMetered_DoesNotCrash)
 		{
-			// This test just verifies the function doesn't crash
+			// This test verifies the function doesn't crash or throw
 			// Actual return value depends on system state
 			bool result = ler::isConnectionMetered();
-			// Should return either true or false, not crash
-			Assert::IsTrue(result == true || result == false);
+			(void)result; // Suppress unused variable warning
 		}
 
 		TEST_METHOD(ShouldExecuteBasedOnNetwork_AlwaysExecute_ReturnsTrue)
@@ -33,20 +31,20 @@ namespace lastexecuterecordmstest
 			Assert::IsTrue(result);
 		}
 
-		TEST_METHOD(ShouldExecuteBasedOnNetwork_ExecuteOnMetered_ReturnsBoolean)
+		TEST_METHOD(ShouldExecuteBasedOnNetwork_ExecuteOnMetered_DoesNotCrash)
 		{
 			// NetworkOption::ExecuteOnMetered (1) depends on connection state
-			// Should not crash
+			// Should not crash or throw
 			bool result = ler::shouldExecuteBasedOnNetwork(ler::NetworkOption::ExecuteOnMetered);
-			Assert::IsTrue(result == true || result == false);
+			(void)result; // Suppress unused variable warning
 		}
 
-		TEST_METHOD(ShouldExecuteBasedOnNetwork_ExecuteWhenConnected_ReturnsBoolean)
+		TEST_METHOD(ShouldExecuteBasedOnNetwork_ExecuteWhenConnected_DoesNotCrash)
 		{
 			// NetworkOption::ExecuteWhenConnected (0) depends on connection state
-			// Should not crash
+			// Should not crash or throw
 			bool result = ler::shouldExecuteBasedOnNetwork(ler::NetworkOption::ExecuteWhenConnected);
-			Assert::IsTrue(result == true || result == false);
+			(void)result; // Suppress unused variable warning
 		}
 
 		TEST_METHOD(NetworkOption_EnumValues_AreCorrect)

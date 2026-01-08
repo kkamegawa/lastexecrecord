@@ -126,12 +126,65 @@ bool shouldExecuteBasedOnNetwork(NetworkOption option) {
             // Execute if any internet connection exists (metered or not)
             return hasInternetConnection();
             
-        case NetworkOption::ExecuteWhenConnected:
+        case NetworkOption::ExecuteWhenConnected: {
             // Execute only if connected and NOT metered
-            if (!hasInternetConnection()) {
-                return false;
+            // Optimize by checking connection and metered status together
+            // Initialize COM for this thread if not already initialized
+            HRESULT hrInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+            bool comInitialized = (hrInit == S_OK);
+            
+            // Create NetworkListManager instance
+            ComPtr<INetworkListManager> pNetworkListManager;
+            HRESULT hr = CoCreateInstance(
+                CLSID_NetworkListManager,
+                nullptr,
+                CLSCTX_ALL,
+                IID_INetworkListManager,
+                reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
+            );
+            
+            bool shouldExecute = false;
+            if (SUCCEEDED(hr)) {
+                // Check connectivity first
+                NLM_CONNECTIVITY connectivity;
+                hr = pNetworkListManager->GetConnectivity(&connectivity);
+                if (SUCCEEDED(hr)) {
+                    bool hasConnection = (connectivity & NLM_CONNECTIVITY_IPV4_INTERNET) ||
+                                        (connectivity & NLM_CONNECTIVITY_IPV6_INTERNET);
+                    
+                    if (hasConnection) {
+                        // Connected - now check if metered using INetworkCostManager
+                        ComPtr<INetworkCostManager> pCostManager;
+                        hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager, 
+                                                                 reinterpret_cast<void**>(pCostManager.GetAddressOf()));
+                        
+                        if (SUCCEEDED(hr)) {
+                            DWORD costFlags = 0;
+                            hr = pCostManager->GetCost(&costFlags, nullptr);
+                            
+                            if (SUCCEEDED(hr)) {
+                                // Execute only if NOT metered
+                                shouldExecute = (costFlags == NLM_CONNECTION_COST_UNRESTRICTED);
+                            }
+                            else {
+                                // If cost check fails, assume unrestricted for safety
+                                shouldExecute = true;
+                            }
+                        }
+                        else {
+                            // If cost manager not available, assume unrestricted
+                            shouldExecute = true;
+                        }
+                    }
+                }
             }
-            return !isConnectionMetered();
+            
+            if (comInitialized) {
+                CoUninitialize();
+            }
+            
+            return shouldExecute;
+        }
             
         default:
             // Unknown option, default to always execute
