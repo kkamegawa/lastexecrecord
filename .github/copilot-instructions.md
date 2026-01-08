@@ -10,21 +10,25 @@
 
 ## Technology Stack
 
-- **Language**: C++17
-- **Platform**: Windows (primary target)
-- **Build Systems**: Visual Studio 2026, MSBuild
-- **Package Manager**: vcpkg
+- **Language**: C++17 or later
+- **Platform**: Windows (Windows 11 24H2+, Windows Server 2019+)
+- **Build Systems**: Visual Studio 2022 or 2026, MSBuild
+- **Package Manager**: vcpkg (for build tooling only)
 - **Testing Framework**: Microsoft Unit Testing Framework for C++
 - **Standard Library**: STL (prefer over third-party alternatives)
 - **API**: Win32 API (primary for Windows-specific operations)
+- **Output**: Single executable file (.exe) only
 
 ## Security Best Practices
+
+**Security is the highest priority.** All design and implementation decisions must consider security implications first.
 
 ### Command Injection Prevention
 - **ALWAYS** use `exe` + `args[]` separation pattern, never shell string concatenation
 - Use `CreateProcessW` directly instead of shell execution (`cmd.exe /c`)
 - Validate and sanitize all file paths before use
 - Consider path normalization and absolute path requirements
+- Never trust external input - validate everything
 
 ### File Operations Security
 - Use exclusive file locking (`<config>.lock`) to prevent concurrent execution
@@ -54,20 +58,28 @@
 - Reserve capacity for vectors when size is known (`reserve()`)
 
 ### Windows API Best Practices
-- Use Unicode APIs (`CreateProcessW`, `WriteFile`, etc.)
-- Check return values from all Win32 API calls
+- Use Unicode APIs (`CreateProcessW`, `WriteFile`, etc.) - **never use ANSI variants**
+- Check return values from **all** Win32 API calls
 - Use `GetLastError()` for detailed error information
 - Close handles properly (RAII wrappers recommended)
+- Follow Microsoft Learn best practices for Windows C++ development
+- Target Windows 11 24H2+ and Windows Server 2019+ APIs
+- Reference Microsoft Learn documentation for Windows C++ best practices:
+  - Modern C++ practices for Windows
+  - Security best practices for Win32 applications
+  - Memory management and RAII patterns
+  - Error handling strategies
 
-## C++ Modern Practices (C++17)
+## C++ Modern Practices (C++17 and Later)
 
 ### Language Features
+- Use C++17 as minimum standard, prefer newer features when available
 - Use structured bindings for multiple return values
 - Prefer `std::optional` over special return values
 - Use `constexpr` for compile-time constants
 - Use `inline` variables for header-only constants
 - Prefer `if constexpr` for compile-time branching
-- Use `std::filesystem` for path operations (when available)
+- Use `std::filesystem` for path operations (when appropriate)
 
 ### Code Style
 - Use `#pragma once` for header guards
@@ -88,77 +100,103 @@
 ## Dependency Management
 
 ### Library Preferences
-1. **First Choice**: Win32 API + STL
+1. **First Choice**: Win32 API + STL only
    - Use standard library containers and algorithms
    - Use Win32 API for Windows-specific operations
+   - **NO third-party libraries** - implement functionality using only STL and Win32 API
    
-2. **Second Choice**: vcpkg libraries with MIT license
-   - Only add if functionality doesn't exist in STL/Win32
-   - Must have MIT license or compatible permissive license
-   - Document justification for the dependency
-
-3. **Avoid**: Third-party libraries unless absolutely necessary
+2. **Strictly Avoid**: Any third-party libraries
    - No external JSON libraries (we have custom implementation)
-   - No boost unless critical feature needed
-   - No GPL-licensed dependencies
+   - No boost
+   - No vcpkg dependencies beyond build tooling
+   - The project must produce a single .exe file with no external dependencies
 
 ## Testing Practices
 
 ### Test Organization
-- Tests located in `tests/` directory
-- One test file per source module: `Json.tests.cpp`, `Config.tests.cpp`
-- Use doctest macros: `TEST_CASE`, `REQUIRE`, `CHECK`
+- Tests located in `src/lastexecuterecord.mstest/` directory
+- One test file per source module: `JsonTests.cpp`, `ConfigTests.cpp`
+- Use Microsoft Unit Testing Framework for C++ macros: `TEST_CLASS`, `TEST_METHOD`, `Assert::*`
 - Follow t_wada style testing principles (see `docs/unit-test-design-twada.md`)
 
 ### Test Requirements
-- Write tests for all new functionality
+- **Write tests for all new functionality** - unit tests are mandatory for new features
 - Include edge cases and error conditions
 - Test Windows-specific behavior when applicable
 - Mock external dependencies where appropriate
-- Run tests before committing: `ctest --output-on-failure`
+- Run tests before committing using Visual Studio Test Explorer or `vstest.console.exe`
 
 ### Test Structure
 ```cpp
-TEST_CASE("ComponentName: descriptive test name") {
-    // Arrange
-    auto config = setupTestConfig();
-    
-    // Act
-    auto result = performOperation(config);
-    
-    // Assert
-    REQUIRE(result.isValid());
-    CHECK(result.value() == expectedValue);
-}
+TEST_CLASS(ComponentNameTests)
+{
+public:
+    TEST_METHOD(DescriptiveTestName)
+    {
+        // Arrange
+        auto config = setupTestConfig();
+        
+        // Act
+        auto result = performOperation(config);
+        
+        // Assert
+        Assert::IsTrue(result.isValid());
+        Assert::AreEqual(expectedValue, result.value());
+    }
+};
 ```
 
 ## Build and Development Workflow
 
 ### Building the Project
 
-**Visual Studio 2026:**
+**The project must produce a single .exe file** with no external runtime dependencies.
+
+**Visual Studio 2022 or 2026:**
 ```cmd
 Open src\lastexecrecord.sln
 Build -> Build Solution
 ```
 
-**msbuild with vcpkg:**
+**MSBuild (command line):**
+```cmd
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64
+```
+
+**MSBuild with vcpkg (for build tooling):**
 ```cmd
 msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=x64 /p:VcpkgTriplet=x64-windows
 msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgTriplet=x64-windows
-msbuild tests\lastexecrecord.tests.sln /p:Configuration=Debug /p:Platform=Arm64 /p:VcpkgTriplet=arm64-windows
-msbuild tests\lastexecrecord.tests.sln /p:Configuration=Release /p:Platform=Arm64 /p:VcpkgTriplet=arm64-windows
+msbuild src\lastexecrecord.sln /p:Configuration=Debug /p:Platform=ARM64 /p:VcpkgTriplet=arm64-windows
+msbuild src\lastexecrecord.sln /p:Configuration=Release /p:Platform=ARM64 /p:VcpkgTriplet=arm64-windows
 ```
+
+### Testing
+
+Run tests in Visual Studio Test Explorer:
+1. Open `src\lastexecrecord.sln` in Visual Studio
+2. Build the solution (Ctrl+Shift+B)
+3. Open Test Explorer (Test → Test Explorer)
+4. Click "Run All" to execute all tests
 
 
 ### Before Committing
-1. Build successfully with no warnings
+1. Build successfully with **no warnings** (treat warnings as errors)
 2. Run all tests and verify they pass
 3. Check that no memory leaks are introduced
-4. Verify security implications of changes
+4. **Verify security implications** of all changes
 5. Update documentation if needed
+6. Ensure the output is still a single .exe file
 
 ## Code Conventions
+
+### Code Maintenance Priority
+- Write maintainable, readable code - clarity over cleverness
+- Follow consistent naming conventions throughout the codebase
+- Keep functions focused and single-purpose
+- Document complex logic and non-obvious decisions
+- Refactor duplication when safe to do so
 
 ### Error Handling
 - Use exceptions for exceptional conditions
@@ -272,11 +310,13 @@ if (!isValid) {
 - Use shell execution for commands (`cmd.exe /c`, `system()`)
 - Ignore Win32 API return values
 - Use raw pointers for ownership
-- Introduce unnecessary external dependencies
+- **Introduce ANY external dependencies** - the project must remain dependency-free (STL + Win32 API only)
 - Add GPL or restrictive licensed libraries
 - Commit secrets or sensitive data
 - Break backward compatibility without version bump
 - Use platform-specific code without #ifdef guards (for future portability)
+- Produce anything other than a single .exe file
+- Compromise security for convenience
 
 ## Future Considerations
 
@@ -296,4 +336,11 @@ if (!isValid) {
 
 ---
 
-**Remember**: This is a security-conscious, performance-oriented Windows utility. Always think about security implications, minimize dependencies, and maintain high code quality standards.
+**Remember**: 
+1. **Security is the highest priority** - always consider security implications first
+2. This is a **single .exe** Windows utility with **zero external dependencies**
+3. Use only **STL and Win32 API** - no third-party libraries allowed
+4. Write **unit tests for all new features** using Microsoft Unit Testing Framework for C++
+5. Build with **MSBuild** for Visual Studio 2022 or 2026
+6. Target **Windows 11 24H2+** and **Windows Server 2019+**
+7. **Code maintenance** is critical - write clear, maintainable code
