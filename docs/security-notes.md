@@ -1,32 +1,32 @@
 ﻿# Security notes
 
-このツールは「設定 JSON によってプロセス起動を制御する」ため、設定ファイルの保護がそのまま安全性に直結します。
+This tool "controls process execution via configuration JSON", so protecting the configuration file directly impacts security.
 
-## 1. コマンドインジェクション回避
+## 1. Command injection prevention
 
-- `exe` と `args[]` を分離し、`CreateProcessW` を使用。
-- 文字列を `cmd.exe /c` などの shell に渡す方式は採用しない（ただし `exe` に cmd.exe を指定すれば実行できるため、禁止するなら追加ポリシーが必要）。
+- Uses `exe` and `args[]` separation with `CreateProcessW`.
+- Does not use shell execution methods like `cmd.exe /c` (however, if `cmd.exe` is specified in `exe`, it can be executed, so additional policies are needed to prohibit it).
 
-## 2. 同時起動・破損対策
+## 2. Concurrent execution and corruption prevention
 
-- `<config>.lock` を排他オープンして多重起動を抑止。
-- config 更新は `.tmp` 書き込み→ `MoveFileEx(REPLACE_EXISTING|WRITE_THROUGH)` で原子的に置換。
+- Prevents multiple simultaneous runs by exclusively opening `<config>.lock`.
+- Config updates are atomic: write to `.tmp` → replace with `MoveFileEx(REPLACE_EXISTING|WRITE_THROUGH)`.
 
-## 3. 推奨運用
+## 3. Recommended practices
 
-- config を信頼できる場所に置く（ユーザー専用ディレクトリ等）。
-- 管理者権限で実行する場合は特に注意（config 改ざん＝任意コード実行になりうる）。
-- 可能なら config の ACL をユーザー限定にする。
+- Place config in a trusted location (e.g., user-only directory).
+- Be especially careful when running with administrator privileges (config tampering = arbitrary code execution).
+- If possible, restrict config ACL to the user only.
 
-## 4. 将来の強化案
+## 4. Future enhancements
 
-- `exe` の絶対パス強制と正規化。
-- `cmd.exe`, `powershell.exe` 等を禁止/制限する allow-list。
-- `exe` の署名/ハッシュ検証（要件次第）。
+- Enforce absolute path and normalization for `exe`.
+- Allow-list to prohibit/restrict `cmd.exe`, `powershell.exe`, etc.
+- Signature/hash verification for `exe` (depending on requirements).
 
-## 5. ネットワーク状態チェック
+## 5. Network status check
 
-- `networkOption` による実行制御は Win32 API (INetworkListManager) を使用。
-- ネットワーク状態の確認は起動時に1回のみ実行され、COM を使用。
-- COM 初期化は関数内で行われ、既に初期化されている場合は再初期化しない。
-- ネットワーク情報へのアクセスに管理者権限は不要（標準ユーザーで動作）。
+- Execution control via `networkOption` uses Win32 API (INetworkListManager).
+- Network status check is performed once at startup and uses COM.
+- COM initialization is done within functions and does not re-initialize if already initialized.
+- No administrator privileges required to access network information (works with standard user).
