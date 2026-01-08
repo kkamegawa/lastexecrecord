@@ -51,6 +51,7 @@ static std::wstring sampleConfigText() {
     std::wstring s;
     s += L"{\n";
     s += L"  \"version\": 1,\n";
+    s += L"  \"networkOption\": 2,\n";
     s += L"  \"defaults\": {\n";
     s += L"    \"minIntervalSeconds\": 0,\n";
     s += L"    \"timeoutSeconds\": 0\n";
