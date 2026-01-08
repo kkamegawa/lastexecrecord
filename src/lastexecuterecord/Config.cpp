@@ -105,6 +105,13 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
 
     cfg.version = getIntFieldOrDefault(cfg.root, L"version", 1);
 
+    // networkOption: 0=connected only, 1=metered ok, 2=always (default: 2)
+    std::int64_t netOpt = getIntFieldOrDefault(cfg.root, L"networkOption", 2);
+    if (netOpt < 0 || netOpt > 2) {
+        throw JsonParseError("networkOption must be 0, 1, or 2");
+    }
+    cfg.networkOption = static_cast<NetworkOption>(netOpt);
+
     // defaults
     const JsonValue* defaults = cfg.root.tryGet(L"defaults");
     if (defaults && defaults->isObject()) {

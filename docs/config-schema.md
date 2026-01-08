@@ -10,6 +10,7 @@
 | key | type | required | default | note |
 | --- | --- | --- | --- | --- |
 | `version` | number | no | 1 | 予約 |
+| `networkOption` | number | no | 2 | ネットワーク状態による実行制御（0:接続時のみ, 1:従量課金OK, 2:常に実行） |
 | `defaults.minIntervalSeconds` | number | no | 0 | コマンドの既定最短間隔 |
 | `defaults.timeoutSeconds` | number | no | 0 | コマンドの既定タイムアウト（0は無制限） |
 | `commands` | array | yes | - | 実行するコマンドを上から順に処理 |
@@ -32,6 +33,14 @@
 
 - `lastRunUtc` は `YYYY-MM-DDTHH:MM:SSZ` のみ対応
   - 例: `2026-01-02T12:34:56Z`
+
+## Network option
+
+- `networkOption` はネットワーク状態による実行制御
+  - `0`: インターネット接続時のみ実行（従量課金接続では実行しない）
+  - `1`: 従量課金接続でも実行（インターネット接続が必要）
+  - `2`: 常に実行（ネットワーク状態に関係なく実行）デフォルト
+- ネットワークチェックは起動時に1回のみ実行され、条件を満たさない場合は全てのコマンドをスキップ
 
 ## Skip logic
 

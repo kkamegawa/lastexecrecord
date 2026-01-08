@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Json.h"
+#include "NetworkUtil.h"
 
 namespace ler {
 
@@ -31,6 +32,9 @@ struct AppConfig {
 
     std::int64_t defaultMinIntervalSeconds = 0;
     std::int64_t defaultTimeoutSeconds = 0;
+
+    // Network option: 0=connected only, 1=metered ok, 2=always (default: 2)
+    NetworkOption networkOption = NetworkOption::AlwaysExecute;
 
     std::vector<CommandConfig> commands;
 

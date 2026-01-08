@@ -1,6 +1,8 @@
 ﻿{
   "version": 1,
 
+  "networkOption": 2,
+
   "defaults": {
     "minIntervalSeconds": 43200,
     "timeoutSeconds": 60

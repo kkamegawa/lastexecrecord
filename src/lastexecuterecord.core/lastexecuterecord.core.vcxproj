@@ -133,6 +133,7 @@
     <ClCompile Include="..\lastexecuterecord\Config.cpp" />
     <ClCompile Include="..\lastexecuterecord\FileUtil.cpp" />
     <ClCompile Include="..\lastexecuterecord\Json.cpp" />
+    <ClCompile Include="..\lastexecuterecord\NetworkUtil.cpp" />
     <ClCompile Include="..\lastexecuterecord\TimeUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -140,6 +141,7 @@
     <ClInclude Include="..\lastexecuterecord\Config.h" />
     <ClInclude Include="..\lastexecuterecord\FileUtil.h" />
     <ClInclude Include="..\lastexecuterecord\Json.h" />
+    <ClInclude Include="..\lastexecuterecord\NetworkUtil.h" />
     <ClInclude Include="..\lastexecuterecord\TimeUtil.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

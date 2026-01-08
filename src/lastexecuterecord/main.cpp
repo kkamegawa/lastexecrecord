@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "FileUtil.h"
 #include "Json.h"
+#include "NetworkUtil.h"
 #include "TimeUtil.h"
 
 static void printUsage(const wchar_t* exeName) {
@@ -65,6 +66,15 @@ int wmain(int argc, wchar_t* argv[]) {
 		ler::FileLock lock = ler::acquireLockFile(configPath + L".lock");
 
 		ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
+
+		// Check network status early if networkOption requires it
+		if (!ler::shouldExecuteBasedOnNetwork(cfg.networkOption)) {
+			if (verbose) {
+				std::wcout << L"[skip] Skipping all commands due to network status (networkOption="
+					<< static_cast<int>(cfg.networkOption) << L")\n";
+			}
+			return 0;
+		}
 
 		// If localOnly pinning updated config, persist it now.
 		if (cfg.dirty) {
