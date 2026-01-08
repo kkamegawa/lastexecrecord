@@ -262,5 +262,60 @@ namespace lastexecuterecordmstest
 				) != cfg.root.o.end()
 			);
 		}
+
+		TEST_METHOD(Load_WithNetworkOption_ParsesCorrectly)
+		{
+			TempFile tmp(L"networkoption.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"networkOption\": 1,\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1, static_cast<int>(cfg.networkOption));
+		}
+
+		TEST_METHOD(Load_WithoutNetworkOption_DefaultsToAlwaysExecute)
+		{
+			TempFile tmp(L"nonetworkoption.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(2, static_cast<int>(cfg.networkOption));
+		}
+
+		TEST_METHOD(Load_WithInvalidNetworkOption_Throws)
+		{
+			TempFile tmp(L"invalidnetwork.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"networkOption\": 5,\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WithNegativeNetworkOption_Throws)
+		{
+			TempFile tmp(L"negativenetwork.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"networkOption\": -1,\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
 	};
 }

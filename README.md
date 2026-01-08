@@ -62,6 +62,10 @@ Example: `lastexecuterecord.sample.json`
 ### Root fields
 
 - `version` (number, optional): Default is 1
+- `networkOption` (number, optional): Control execution based on network status. Default is 2
+  - `0`: Execute only when internet is connected (not on metered connections)
+  - `1`: Execute even on metered connections (internet connection required)
+  - `2`: Always execute (ignore network status)
 - `defaults.minIntervalSeconds` (number, optional): Default minimum interval for commands
 - `defaults.timeoutSeconds` (number, optional): Default timeout for commands
 - `commands` (array, required): List of commands to run (processed from top to bottom)

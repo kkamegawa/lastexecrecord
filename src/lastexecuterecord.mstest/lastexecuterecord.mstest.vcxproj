@@ -229,6 +229,7 @@
     <ClCompile Include="CommandRunnerTests.cpp" />
     <ClCompile Include="ConfigTests.cpp" />
     <ClCompile Include="FileUtilTests.cpp" />
+    <ClCompile Include="NetworkUtilTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lastexecuterecord.core\lastexecuterecord.core.vcxproj">

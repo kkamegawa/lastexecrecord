@@ -41,6 +41,14 @@
   - `runProcess(exe, args, workingDirectory, timeoutSeconds)`
   - `quoteArgForWindowsCommandLine(arg)`
 
+## Network checking
+
+- `src/lastexecuterecord/NetworkUtil.h/.cpp`
+  - `hasInternetConnection()`
+  - `isConnectionMetered()`
+  - `shouldExecuteBasedOnNetwork(option)`
+  - `NetworkOption` enum: ExecuteWhenConnected(0), ExecuteOnMetered(1), AlwaysExecute(2)
+
 ## Project files
 
 - `src/lastexecuterecord/lastexecuterecord.vcxproj`
