@@ -18,6 +18,16 @@ It avoids external libraries (Win32 API + STL only) and focuses on safe operatio
 By default, the app reads **`%USERPROFILE%\.lastexecrecord\config.json`**.
 If this file doesn't exist, a minimal sample config is created automatically (with commands disabled by default for safety).
 
+## Installation
+
+### Using winget
+
+```cmd
+winget install kkamegawa.lastexecrecord
+```
+
+After installation, you can run `lastexecuterecord.exe` from your terminal.
+
 ## Usage
 
 - `lastexecuterecord.exe`: Run with default config (auto-creates sample if missing)
