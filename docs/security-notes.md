@@ -38,4 +38,4 @@ This tool "controls process execution via configuration JSON", so protecting the
 - Process name comparison is case-insensitive for reliability.
 - Detection is limited to common installer process names (`msiexec.exe`, `setup.exe`, etc.).
 - Failed snapshot creation (e.g., insufficient permissions) is treated as "no installer running" to avoid blocking execution.
-- The handle to the snapshot is properly closed using RAII principles to avoid resource leaks.
+- The handle to the snapshot is explicitly closed using `CloseHandle` to avoid resource leaks.

@@ -53,7 +53,11 @@ static InstallerWaitBehavior getInstallerWaitBehaviorOrDefault(const JsonValue& 
         if (val == 1) return InstallerWaitBehavior::Skip;
         throw JsonParseError("installerWaitBehavior must be 0 (wait) or 1 (skip)");
     }
-    return def;
+    // Invalid type - throw error instead of silently returning default
+    std::string msg = "Invalid type for field ";
+    msg += std::string(key.begin(), key.end());
+    msg += " in installerWaitBehavior; expected string or integer";
+    throw JsonParseError(msg);
 }
 
 static void upsertObjectField(JsonValue& obj, const std::wstring& key, JsonValue value) {
@@ -145,6 +149,14 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
         cfg.defaultInstallerWaitBehavior = getInstallerWaitBehaviorOrDefault(*defaults, L"installerWaitBehavior", InstallerWaitBehavior::Wait);
         cfg.defaultInstallerWaitSeconds = getIntFieldOrDefault(*defaults, L"installerWaitSeconds", 30);
         cfg.defaultInstallerMaxRetries = getIntFieldOrDefault(*defaults, L"installerMaxRetries", 10);
+        
+        // Validate default values
+        if (cfg.defaultInstallerWaitSeconds < 0) {
+            throw JsonParseError("defaults.installerWaitSeconds must be >= 0");
+        }
+        if (cfg.defaultInstallerMaxRetries < 0) {
+            throw JsonParseError("defaults.installerMaxRetries must be >= 0");
+        }
     }
 
     const JsonValue& cmdsV = requireObjectField(cfg.root, L"commands", L"root");

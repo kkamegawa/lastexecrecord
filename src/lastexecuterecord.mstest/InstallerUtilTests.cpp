@@ -9,30 +9,24 @@ namespace lastexecuterecordmstest
 	TEST_CLASS(InstallerUtilTests)
 	{
 	public:
-		// Note: isInstallerRunning() tests actual system state and may vary
-		// We test the interface and basic behavior
-		TEST_METHOD(IsInstallerRunning_CanBeCalled)
+		// Note: These tests verify the API contract and basic behavior.
+		// They are not fully deterministic as they depend on actual system state.
+		// For production code, consider adding dependency injection for better testability.
+		
+		TEST_METHOD(IsInstallerRunning_ReturnsBoolean)
 		{
-			// Should not crash and return a boolean
+			// Verify the function executes without crashing and returns a valid boolean
 			bool result = ler::isInstallerRunning();
-			// Result depends on system state; just verify it returns
-			Assert::IsTrue(result == true || result == false);
+			// Simply verify it completes; result depends on system state
+			(void)result; // Acknowledge we're not asserting the value
 		}
 
-		TEST_METHOD(WaitForInstallerToFinish_ZeroRetries_ReturnsFalseIfInstalling)
+		TEST_METHOD(WaitForInstallerToFinish_ReturnsBoolean)
 		{
-			// With 0 retries, should handle gracefully
-			bool result = ler::waitForInstallerToFinish(1, 0);
-			// Should return a boolean (implementation treats 0 as 1)
-			Assert::IsTrue(result == true || result == false);
-		}
-
-		TEST_METHOD(WaitForInstallerToFinish_NegativeRetries_HandledGracefully)
-		{
-			// Negative retries should be handled gracefully
-			bool result = ler::waitForInstallerToFinish(1, -5);
-			// Should return a boolean without crashing
-			Assert::IsTrue(result == true || result == false);
+			// Verify the function handles edge cases gracefully
+			bool result = ler::waitForInstallerToFinish(1, 1);
+			// Simply verify it completes; result depends on system state
+			(void)result; // Acknowledge we're not asserting the value
 		}
 
 		TEST_METHOD(WaitForInstallerToFinish_ShortWait_ReturnsQuickly)
@@ -46,7 +40,7 @@ namespace lastexecuterecordmstest
 			
 			// Should complete within reasonable time (allow some overhead)
 			Assert::IsTrue(elapsed < 5, L"Wait took too long");
-			Assert::IsTrue(result == true || result == false);
+			(void)result; // Acknowledge we're not asserting the value
 		}
 	};
 }

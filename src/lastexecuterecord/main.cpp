@@ -121,9 +121,8 @@ int wmain(int argc, wchar_t* argv[]) {
 				}
 			}
 
-			std::wcout << L"[run ] " << c.name << L"\n";
-
 			if (dryRun) {
+				std::wcout << L"[run ] " << c.name << L"\n";
 				std::wcout << L"       exe: " << c.exe << L"\n";
 				if (verbose && !c.args.empty()) {
 					std::wcout << L"       args:";
@@ -155,6 +154,8 @@ int wmain(int argc, wchar_t* argv[]) {
 					}
 				}
 			}
+
+			std::wcout << L"[run ] " << c.name << L"\n";
 
 			std::int64_t startEpoch = ler::nowEpochSecondsUtc();
 			ler::RunResult rr = ler::runProcess(c.exe, c.args, c.workingDirectory, c.timeoutSeconds);
