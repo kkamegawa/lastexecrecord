@@ -149,6 +149,13 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
         cfg.defaultInstallerWaitBehavior = getInstallerWaitBehaviorOrDefault(*defaults, L"installerWaitBehavior", InstallerWaitBehavior::Wait);
         cfg.defaultInstallerWaitSeconds = getIntFieldOrDefault(*defaults, L"installerWaitSeconds", 30);
         cfg.defaultInstallerMaxRetries = getIntFieldOrDefault(*defaults, L"installerMaxRetries", 10);
+
+        if (cfg.defaultInstallerWaitSeconds < 0) {
+            throw JsonParseError("installerWaitSeconds must be non-negative");
+        }
+        if (cfg.defaultInstallerMaxRetries < 0) {
+            throw JsonParseError("installerMaxRetries must be non-negative");
+        }
         
         // Validate default values
         if (cfg.defaultInstallerWaitSeconds < 0) {
