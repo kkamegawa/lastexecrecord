@@ -30,3 +30,12 @@ This tool "controls process execution via configuration JSON", so protecting the
 - Network status check is performed once at startup and uses COM.
 - COM initialization is done within functions and does not re-initialize if already initialized.
 - No administrator privileges required to access network information (works with standard user).
+
+## 6. Installer detection
+
+- Uses `CreateToolhelp32Snapshot` and process enumeration APIs to detect running installer processes.
+- No administrator privileges required to enumerate processes (works with standard user).
+- Process name comparison is case-insensitive for reliability.
+- Detection is limited to common installer process names (`msiexec.exe`, `setup.exe`, etc.).
+- Failed snapshot creation (e.g., insufficient permissions) is treated as "no installer running" to avoid blocking execution.
+- The handle to the snapshot is explicitly closed using `CloseHandle` to avoid resource leaks.

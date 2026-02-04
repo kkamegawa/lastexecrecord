@@ -230,6 +230,7 @@
     <ClCompile Include="ConfigTests.cpp" />
     <ClCompile Include="FileUtilTests.cpp" />
     <ClCompile Include="NetworkUtilTests.cpp" />
+    <ClCompile Include="InstallerUtilTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lastexecuterecord.core\lastexecuterecord.core.vcxproj">

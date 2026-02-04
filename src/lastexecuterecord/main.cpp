@@ -1,4 +1,4 @@
-﻿#include <Windows.h>
+#include <Windows.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -6,6 +6,7 @@
 #include "CommandRunner.h"
 #include "Config.h"
 #include "FileUtil.h"
+#include "InstallerUtil.h"
 #include "Json.h"
 #include "NetworkUtil.h"
 #include "TimeUtil.h"
@@ -120,9 +121,8 @@ int wmain(int argc, wchar_t* argv[]) {
 				}
 			}
 
-			std::wcout << L"[run ] " << c.name << L"\n";
-
 			if (dryRun) {
+				std::wcout << L"[run ] " << c.name << L"\n";
 				std::wcout << L"       exe: " << c.exe << L"\n";
 				if (verbose && !c.args.empty()) {
 					std::wcout << L"       args:";
@@ -131,6 +131,31 @@ int wmain(int argc, wchar_t* argv[]) {
 				}
 				continue;
 			}
+
+			// Check for running installer processes
+			if (ler::isInstallerRunning()) {
+				if (c.installerWaitBehavior == ler::InstallerWaitBehavior::Skip) {
+					std::wcout << L"[skip] " << c.name << L": installer process is running (configured to skip)\n";
+					continue;
+				}
+				else {
+					// Wait for installer to finish
+					if (verbose) {
+						std::wcout << L"[wait] " << c.name << L": installer process detected, waiting (max " 
+							<< c.installerMaxRetries << L" retries, " << c.installerWaitSeconds << L"s each)...\n";
+					}
+					bool installerFinished = ler::waitForInstallerToFinish(c.installerWaitSeconds, c.installerMaxRetries);
+					if (!installerFinished) {
+						std::wcout << L"[skip] " << c.name << L": installer still running after waiting\n";
+						continue;
+					}
+					if (verbose) {
+						std::wcout << L"[ ok ] " << c.name << L": installer finished, proceeding\n";
+					}
+				}
+			}
+
+			std::wcout << L"[run ] " << c.name << L"\n";
 
 			std::int64_t startEpoch = ler::nowEpochSecondsUtc();
 			ler::RunResult rr = ler::runProcess(c.exe, c.args, c.workingDirectory, c.timeoutSeconds);

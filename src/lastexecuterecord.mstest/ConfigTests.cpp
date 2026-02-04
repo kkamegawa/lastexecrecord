@@ -317,5 +317,186 @@ namespace lastexecuterecordmstest
 			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
 			Assert::ExpectException<ler::JsonParseError>(func);
 		}
+
+		TEST_METHOD(Load_WithInstallerWaitBehavior_Wait_ParsesCorrectly)
+		{
+			TempFile tmp(L"installerwait.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitBehavior\": \"wait\"\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(0, static_cast<int>(cfg.commands[0].installerWaitBehavior));
+		}
+
+		TEST_METHOD(Load_WithInstallerWaitBehavior_Skip_ParsesCorrectly)
+		{
+			TempFile tmp(L"installerskip.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitBehavior\": \"skip\"\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(1, static_cast<int>(cfg.commands[0].installerWaitBehavior));
+		}
+
+		TEST_METHOD(Load_WithInstallerWaitBehavior_Integer_ParsesCorrectly)
+		{
+			TempFile tmp(L"installerint.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitBehavior\": 1\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(1, static_cast<int>(cfg.commands[0].installerWaitBehavior));
+		}
+
+		TEST_METHOD(Load_WithInstallerWaitBehavior_Invalid_Throws)
+		{
+			TempFile tmp(L"installerinvalid.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitBehavior\": \"invalid\"\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WithInstallerWaitSeconds_ParsesCorrectly)
+		{
+			TempFile tmp(L"installerwaitseconds.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitSeconds\": 60\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(60LL, cfg.commands[0].installerWaitSeconds);
+		}
+
+		TEST_METHOD(Load_WithInstallerMaxRetries_ParsesCorrectly)
+		{
+			TempFile tmp(L"installermaxretries.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerMaxRetries\": 5\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
+			Assert::AreEqual(5LL, cfg.commands[0].installerMaxRetries);
+		}
+
+		TEST_METHOD(Load_WithDefaultInstallerSettings_ParsesCorrectly)
+		{
+			TempFile tmp(L"defaultinstaller.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"defaults\": {\n"
+				L"    \"installerWaitBehavior\": \"skip\",\n"
+				L"    \"installerWaitSeconds\": 45,\n"
+				L"    \"installerMaxRetries\": 20\n"
+				L"  },\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1, static_cast<int>(cfg.defaultInstallerWaitBehavior));
+			Assert::AreEqual(45LL, cfg.defaultInstallerWaitSeconds);
+			Assert::AreEqual(20LL, cfg.defaultInstallerMaxRetries);
+			// Command should inherit defaults
+			Assert::AreEqual(1, static_cast<int>(cfg.commands[0].installerWaitBehavior));
+			Assert::AreEqual(45LL, cfg.commands[0].installerWaitSeconds);
+			Assert::AreEqual(20LL, cfg.commands[0].installerMaxRetries);
+		}
+
+		TEST_METHOD(Load_WithNegativeInstallerWaitSeconds_Throws)
+		{
+			TempFile tmp(L"negativewaitseconds.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerWaitSeconds\": -5\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WithNegativeInstallerMaxRetries_Throws)
+		{
+			TempFile tmp(L"negativemaxretries.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [\n"
+				L"    {\n"
+				L"      \"name\": \"c1\",\n"
+				L"      \"exe\": \"x.exe\",\n"
+				L"      \"installerMaxRetries\": -1\n"
+				L"    }\n"
+				L"  ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
 	};
 }

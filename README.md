@@ -78,6 +78,11 @@ Example: `lastexecuterecord.sample.json`
   - `2`: Always execute (ignore network status)
 - `defaults.minIntervalSeconds` (number, optional): Default minimum interval for commands
 - `defaults.timeoutSeconds` (number, optional): Default timeout for commands
+- `defaults.installerWaitBehavior` (string or number, optional): Default behavior when installer is running. Default is `"wait"`
+  - `"wait"` or `0`: Wait for installer to finish before executing
+  - `"skip"` or `1`: Skip command if installer is running
+- `defaults.installerWaitSeconds` (number, optional): Wait time in seconds between installer checks. Default is 30
+- `defaults.installerMaxRetries` (number, optional): Maximum number of retries when waiting. Default is 10
 - `commands` (array, required): List of commands to run (processed from top to bottom)
 
 ### Command fields
@@ -89,6 +94,9 @@ Example: `lastexecuterecord.sample.json`
 - `workingDirectory` (string, optional)
 - `minIntervalSeconds` (number, optional): Defaults to `defaults.minIntervalSeconds`
 - `timeoutSeconds` (number, optional): Defaults to `defaults.timeoutSeconds`
+- `installerWaitBehavior` (string or number, optional): Behavior when installer is running. Defaults to `defaults.installerWaitBehavior`
+- `installerWaitSeconds` (number, optional): Wait time between checks. Defaults to `defaults.installerWaitSeconds`
+- `installerMaxRetries` (number, optional): Maximum retries. Defaults to `defaults.installerMaxRetries`
 - `lastRunUtc` (string, optional): Example `2026-01-02T12:34:56Z` (seconds precision)
 - `lastExitCode` (number, optional): Previous exit code
 
@@ -123,6 +131,51 @@ Example: `lastexecuterecord.sample.json`
 - The config uses `exe` + `args[]` and does not assume shell execution like `cmd.exe /c` (helps reduce injection risk).
 - To prevent concurrent runs, the program acquires an exclusive `<config>.lock` file.
 - **DO NOT** use environment variables or user input to construct `exe` or `args` in the config file, as this may lead to command injection vulnerabilities.
+
+## Installer detection and wait behavior
+
+If a Windows installer process (such as `msiexec.exe`) is running in the background, some installers launched by this program may fail. To handle this scenario, the application can:
+
+- **Wait** for the installer to finish before executing commands (default behavior)
+- **Skip** execution if an installer is detected
+
+This behavior is controlled by the `installerWaitBehavior` configuration field (either globally in `defaults` or per-command).
+
+### How it works
+
+1. Before executing each command, the application checks if any of the following installer processes are running:
+   - `msiexec.exe` (Windows Installer)
+   - `setup.exe`, `install.exe`, `setupapi.exe`, `msiinstall.exe`, `windows installer.exe`
+
+2. If an installer is detected and `installerWaitBehavior` is `"wait"` (default):
+   - The application waits for `installerWaitSeconds` seconds (default: 30 seconds)
+   - Then checks again if the installer is still running
+   - This repeats up to `installerMaxRetries` times (default: 10 retries)
+   - If the installer finishes, the command is executed
+   - If the installer is still running after all retries, the command is skipped
+
+3. If an installer is detected and `installerWaitBehavior` is `"skip"`:
+   - The command is immediately skipped
+
+### Example configuration
+
+```json
+{
+  "defaults": {
+    "installerWaitBehavior": "wait",
+    "installerWaitSeconds": 30,
+    "installerMaxRetries": 10
+  },
+  "commands": [
+    {
+      "name": "system update",
+      "exe": "winget.exe",
+      "args": ["upgrade", "--all"],
+      "installerWaitBehavior": "wait"
+    }
+  ]
+}
+```
 
 ## Development
 
