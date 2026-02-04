@@ -136,9 +136,7 @@ int wmain(int argc, wchar_t* argv[]) {
 			// Check for running installer processes
 			if (ler::isInstallerRunning()) {
 				if (c.installerWaitBehavior == ler::InstallerWaitBehavior::Skip) {
-					if (verbose) {
-						std::wcout << L"[skip] " << c.name << L": installer process is running (configured to skip)\n";
-					}
+					std::wcout << L"[skip] " << c.name << L": installer process is running (configured to skip)\n";
 					continue;
 				}
 				else {
@@ -149,7 +147,7 @@ int wmain(int argc, wchar_t* argv[]) {
 					}
 					bool installerFinished = ler::waitForInstallerToFinish(c.installerWaitSeconds, c.installerMaxRetries);
 					if (!installerFinished) {
-						std::wcerr << L"[skip] " << c.name << L": installer still running after waiting\n";
+						std::wcout << L"[skip] " << c.name << L": installer still running after waiting\n";
 						continue;
 					}
 					if (verbose) {
