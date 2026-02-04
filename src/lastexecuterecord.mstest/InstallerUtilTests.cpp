@@ -1,5 +1,6 @@
 #include "CppUnitTest.h"
 #include "InstallerUtil.h"
+#include <chrono>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
