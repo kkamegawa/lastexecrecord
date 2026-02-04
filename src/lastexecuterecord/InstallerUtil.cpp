@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cwctype>
 #include <limits>
+#include <string>
 
 namespace ler {
 
