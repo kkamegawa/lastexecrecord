@@ -5,7 +5,10 @@
 
   "defaults": {
     "minIntervalSeconds": 43200,
-    "timeoutSeconds": 60
+    "timeoutSeconds": 60,
+    "installerWaitBehavior": "wait",
+    "installerWaitSeconds": 30,
+    "installerMaxRetries": 10
   },
 
   "commands": [

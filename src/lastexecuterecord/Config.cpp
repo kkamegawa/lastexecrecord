@@ -35,6 +35,27 @@ static std::int64_t getIntFieldOrDefault(const JsonValue& obj, const std::wstrin
     return v->asInt(key.c_str());
 }
 
+static InstallerWaitBehavior getInstallerWaitBehaviorOrDefault(const JsonValue& obj, const std::wstring& key, InstallerWaitBehavior def) {
+    const JsonValue* v = obj.tryGet(key);
+    if (!v) return def;
+    if (v->isNull()) return def;
+    if (v->isString()) {
+        std::wstring s = v->asString(key.c_str());
+        std::wstring lower = s;
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](wchar_t c) { return std::towlower(c); });
+        if (lower == L"wait") return InstallerWaitBehavior::Wait;
+        if (lower == L"skip") return InstallerWaitBehavior::Skip;
+        throw JsonParseError("installerWaitBehavior must be 'wait' or 'skip'");
+    }
+    if (v->isInt()) {
+        std::int64_t val = v->asInt(key.c_str());
+        if (val == 0) return InstallerWaitBehavior::Wait;
+        if (val == 1) return InstallerWaitBehavior::Skip;
+        throw JsonParseError("installerWaitBehavior must be 0 (wait) or 1 (skip)");
+    }
+    return def;
+}
+
 static void upsertObjectField(JsonValue& obj, const std::wstring& key, JsonValue value) {
     if (!obj.isObject()) throw std::runtime_error("not an object");
     for (auto& kv : obj.o) {
@@ -54,7 +75,10 @@ static std::wstring sampleConfigText() {
     s += L"  \"networkOption\": 2,\n";  // 2 = AlwaysExecute (default)
     s += L"  \"defaults\": {\n";
     s += L"    \"minIntervalSeconds\": 0,\n";
-    s += L"    \"timeoutSeconds\": 0\n";
+    s += L"    \"timeoutSeconds\": 0,\n";
+    s += L"    \"installerWaitBehavior\": \"wait\",\n";
+    s += L"    \"installerWaitSeconds\": 30,\n";
+    s += L"    \"installerMaxRetries\": 10\n";
     s += L"  },\n";
     s += L"  \"commands\": [\n";
     s += L"    {\n";
@@ -118,6 +142,9 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
     if (defaults && defaults->isObject()) {
         cfg.defaultMinIntervalSeconds = getIntFieldOrDefault(*defaults, L"minIntervalSeconds", 0);
         cfg.defaultTimeoutSeconds = getIntFieldOrDefault(*defaults, L"timeoutSeconds", 0);
+        cfg.defaultInstallerWaitBehavior = getInstallerWaitBehaviorOrDefault(*defaults, L"installerWaitBehavior", InstallerWaitBehavior::Wait);
+        cfg.defaultInstallerWaitSeconds = getIntFieldOrDefault(*defaults, L"installerWaitSeconds", 30);
+        cfg.defaultInstallerMaxRetries = getIntFieldOrDefault(*defaults, L"installerMaxRetries", 10);
     }
 
     const JsonValue& cmdsV = requireObjectField(cfg.root, L"commands", L"root");
@@ -163,6 +190,12 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
 
         cc.timeoutSeconds = getIntFieldOrDefault(c, L"timeoutSeconds", cfg.defaultTimeoutSeconds);
         if (cc.timeoutSeconds < 0) throw JsonParseError("timeoutSeconds must be >= 0");
+
+        cc.installerWaitBehavior = getInstallerWaitBehaviorOrDefault(c, L"installerWaitBehavior", cfg.defaultInstallerWaitBehavior);
+        cc.installerWaitSeconds = getIntFieldOrDefault(c, L"installerWaitSeconds", cfg.defaultInstallerWaitSeconds);
+        if (cc.installerWaitSeconds < 0) throw JsonParseError("installerWaitSeconds must be >= 0");
+        cc.installerMaxRetries = getIntFieldOrDefault(c, L"installerMaxRetries", cfg.defaultInstallerMaxRetries);
+        if (cc.installerMaxRetries < 0) throw JsonParseError("installerMaxRetries must be >= 0");
 
         cc.lastRunUtc = getStringFieldOrEmpty(c, L"lastRunUtc");
         cc.hasLastRunUtc = !cc.lastRunUtc.empty();
