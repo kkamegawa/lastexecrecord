@@ -161,14 +161,19 @@ int wmain(int argc, wchar_t* argv[]) {
 						sleepMs = static_cast<DWORD>(c.installerWaitSeconds > 0 ? c.installerWaitSeconds * 1000 : 1000);
 					}
 					bool installerFinished = false;
-					for (std::int64_t attempt = 0; attempt < maxRetries; attempt++) {
-						std::wcout << L"[wait] " << c.name << L": installer process detected, waiting "
-							<< L"(attempt " << (attempt + 1) << L"/" << maxRetries
-							<< L", " << c.installerWaitSeconds << L"s interval)...\n";
-						Sleep(sleepMs);
+					for (std::int64_t attempt = 0; attempt < maxRetries; ++attempt) {
+						// Check immediately whether the installer has finished.
 						if (!ler::isInstallerRunning()) {
 							installerFinished = true;
 							break;
+						}
+
+						// Only sleep if we have another attempt remaining.
+						if (attempt + 1 < maxRetries) {
+							std::wcout << L"[wait] " << c.name << L": installer process detected, waiting "
+								<< L"(attempt " << (attempt + 1) << L"/" << maxRetries
+								<< L", " << c.installerWaitSeconds << L"s interval)...\n";
+							Sleep(sleepMs);
 						}
 					}
 					if (!installerFinished) {
