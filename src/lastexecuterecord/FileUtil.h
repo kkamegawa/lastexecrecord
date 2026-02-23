@@ -42,4 +42,9 @@ struct FileLock {
 
 FileLock acquireLockFile(const std::wstring& lockPath);
 
+// Try to acquire lock file without blocking.
+// Returns an invalid FileLock (h == INVALID_HANDLE_VALUE) if the file is currently
+// held by another process (sharing violation). Throws on unexpected errors.
+FileLock tryAcquireLockFile(const std::wstring& lockPath);
+
 } // namespace ler

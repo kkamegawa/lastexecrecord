@@ -102,6 +102,27 @@ namespace lastexecuterecordmstest
 			Assert::ExpectException<std::runtime_error>(func);
 		}
 
+		TEST_METHOD(TryLock_AcquireLock_Succeeds)
+		{
+			TempFile tmp(L"trylock.txt");
+
+			ler::FileLock lock = ler::tryAcquireLockFile(tmp.path);
+			Assert::IsTrue(lock.h != INVALID_HANDLE_VALUE);
+		}
+
+		TEST_METHOD(TryLock_WhenLocked_ReturnsInvalidHandle)
+		{
+			TempFile tmp(L"trydoublelock.txt");
+
+			// First lock succeeds
+			ler::FileLock lock1 = ler::acquireLockFile(tmp.path);
+			Assert::IsTrue(lock1.h != INVALID_HANDLE_VALUE);
+
+			// tryAcquireLockFile should return an invalid handle instead of throwing
+			ler::FileLock lock2 = ler::tryAcquireLockFile(tmp.path);
+			Assert::IsTrue(lock2.h == INVALID_HANDLE_VALUE);
+		}
+
 		TEST_METHOD(PathJoin_CombinesPaths)
 		{
 			std::wstring result = ler::joinPath(L"C:\\temp", L"file.txt");

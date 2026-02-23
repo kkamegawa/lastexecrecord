@@ -177,4 +177,17 @@ FileLock acquireLockFile(const std::wstring& lockPath) {
     return FileLock(h);
 }
 
+FileLock tryAcquireLockFile(const std::wstring& lockPath) {
+    HANDLE h = CreateFileW(lockPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
+        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        DWORD e = GetLastError();
+        if (e == ERROR_SHARING_VIOLATION || e == ERROR_LOCK_VIOLATION) {
+            return FileLock{}; // Lock held by another process; caller should retry
+        }
+        throw win32Error("Failed to acquire lock file");
+    }
+    return FileLock(h);
+}
+
 } // namespace ler
