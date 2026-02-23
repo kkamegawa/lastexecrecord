@@ -153,13 +153,21 @@ int wmain(int argc, wchar_t* argv[]) {
 					// Wait for installer to finish, printing a status line on each attempt.
 					// Treat installerMaxRetries <= 0 as 1 (guarantee at least one wait attempt).
 					std::int64_t maxRetries = c.installerMaxRetries > 0 ? c.installerMaxRetries : 1;
-					DWORD sleepMs;
-					if (c.installerWaitSeconds > static_cast<std::int64_t>(kMaxSleepMs) / 1000) {
-						sleepMs = kMaxSleepMs;
+
+					// Compute the actual wait interval in seconds, matching the Sleep() duration.
+					const std::int64_t maxSleepSeconds = static_cast<std::int64_t>(kMaxSleepMs) / 1000;
+					std::int64_t effectiveWaitSeconds;
+					if (c.installerWaitSeconds <= 0) {
+						effectiveWaitSeconds = 1; // Ensure at least a minimal wait
+					}
+					else if (c.installerWaitSeconds > maxSleepSeconds) {
+						effectiveWaitSeconds = maxSleepSeconds; // Cap to Sleep() limit
 					}
 					else {
-						sleepMs = static_cast<DWORD>(c.installerWaitSeconds > 0 ? c.installerWaitSeconds * 1000 : 1000);
+						effectiveWaitSeconds = c.installerWaitSeconds;
 					}
+					DWORD sleepMs = static_cast<DWORD>(effectiveWaitSeconds * 1000);
+
 					bool installerFinished = false;
 					for (std::int64_t attempt = 0; attempt < maxRetries; ++attempt) {
 						// Check immediately whether the installer has finished.
@@ -172,7 +180,11 @@ int wmain(int argc, wchar_t* argv[]) {
 						if (attempt + 1 < maxRetries) {
 							std::wcout << L"[wait] " << c.name << L": installer process detected, waiting "
 								<< L"(attempt " << (attempt + 1) << L"/" << maxRetries
-								<< L", " << c.installerWaitSeconds << L"s interval)...\n";
+								<< L", " << effectiveWaitSeconds << L"s interval";
+							if (effectiveWaitSeconds != c.installerWaitSeconds) {
+								std::wcout << L" (configured " << c.installerWaitSeconds << L"s)";
+							}
+							std::wcout << L")...\n";
 							Sleep(sleepMs);
 						}
 					}
