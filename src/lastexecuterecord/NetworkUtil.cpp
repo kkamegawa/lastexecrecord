@@ -1,4 +1,4 @@
-// NetworkUtil.cpp
+﻿// NetworkUtil.cpp
 #include "NetworkUtil.h"
 
 #include <Windows.h>
@@ -13,28 +13,30 @@ namespace ler {
 bool hasInternetConnection() {
     // Initialize COM for this thread if not already initialized
     HRESULT hrInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    bool comInitialized = (hrInit == S_OK);
-    
-    // Create NetworkListManager instance
-    ComPtr<INetworkListManager> pNetworkListManager;
-    HRESULT hr = CoCreateInstance(
-        CLSID_NetworkListManager,
-        nullptr,
-        CLSCTX_ALL,
-        IID_INetworkListManager,
-        reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
-    );
+    bool comInitialized = SUCCEEDED(hrInit);
     
     bool hasConnection = false;
-    if (SUCCEEDED(hr)) {
-        NLM_CONNECTIVITY connectivity;
-        hr = pNetworkListManager->GetConnectivity(&connectivity);
+    {
+        // Create NetworkListManager instance
+        ComPtr<INetworkListManager> pNetworkListManager;
+        HRESULT hr = CoCreateInstance(
+            CLSID_NetworkListManager,
+            nullptr,
+            CLSCTX_ALL,
+            IID_INetworkListManager,
+            reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
+        );
+
         if (SUCCEEDED(hr)) {
-            // Check if we have internet connectivity
-            hasConnection = (connectivity & NLM_CONNECTIVITY_IPV4_INTERNET) ||
-                           (connectivity & NLM_CONNECTIVITY_IPV6_INTERNET);
+            NLM_CONNECTIVITY connectivity;
+            hr = pNetworkListManager->GetConnectivity(&connectivity);
+            if (SUCCEEDED(hr)) {
+                // Check if we have internet connectivity
+                hasConnection = (connectivity & NLM_CONNECTIVITY_IPV4_INTERNET) ||
+                               (connectivity & NLM_CONNECTIVITY_IPV6_INTERNET);
+            }
         }
-    }
+    } // ComPtr released here, before CoUninitialize
     
     if (comInitialized) {
         CoUninitialize();
@@ -46,40 +48,42 @@ bool hasInternetConnection() {
 bool isConnectionMetered() {
     // Initialize COM for this thread if not already initialized
     HRESULT hrInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    bool comInitialized = (hrInit == S_OK);
-    
-    // Create NetworkListManager instance
-    ComPtr<INetworkListManager> pNetworkListManager;
-    HRESULT hr = CoCreateInstance(
-        CLSID_NetworkListManager,
-        nullptr,
-        CLSCTX_ALL,
-        IID_INetworkListManager,
-        reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
-    );
+    bool comInitialized = SUCCEEDED(hrInit);
     
     bool isMetered = false;
-    if (SUCCEEDED(hr)) {
-        // Use INetworkCostManager to check cost
-        ComPtr<INetworkCostManager> pCostManager;
-        hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager,
-                                                 reinterpret_cast<void**>(pCostManager.GetAddressOf()));
-        
+    {
+        // Create NetworkListManager instance
+        ComPtr<INetworkListManager> pNetworkListManager;
+        HRESULT hr = CoCreateInstance(
+            CLSID_NetworkListManager,
+            nullptr,
+            CLSCTX_ALL,
+            IID_INetworkListManager,
+            reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
+        );
+
         if (SUCCEEDED(hr)) {
-            DWORD costFlags = 0;
-            hr = pCostManager->GetCost(&costFlags, nullptr);
-            
+            // Use INetworkCostManager to check cost
+            ComPtr<INetworkCostManager> pCostManager;
+            hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager,
+                                                     reinterpret_cast<void**>(pCostManager.GetAddressOf()));
+
             if (SUCCEEDED(hr)) {
-                // Check if connection is NOT unrestricted (meaning it's metered)
-                isMetered = (costFlags != NLM_CONNECTION_COST_UNRESTRICTED);
+                DWORD costFlags = 0;
+                hr = pCostManager->GetCost(&costFlags, nullptr);
+
+                if (SUCCEEDED(hr)) {
+                    // Check if connection is NOT unrestricted (meaning it's metered)
+                    isMetered = (costFlags != NLM_CONNECTION_COST_UNRESTRICTED);
+                }
             }
         }
-    }
-    
+    } // ComPtr released here, before CoUninitialize
+
     if (comInitialized) {
         CoUninitialize();
     }
-    
+
     return isMetered;
 }
 
@@ -101,58 +105,60 @@ bool shouldExecuteBasedOnNetwork(NetworkOption option) {
             
             // Initialize COM for this thread if not already initialized
             HRESULT hrInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-            bool comInitialized = (hrInit == S_OK);
-            
-            // Create NetworkListManager instance
-            ComPtr<INetworkListManager> pNetworkListManager;
-            HRESULT hr = CoCreateInstance(
-                CLSID_NetworkListManager,
-                nullptr,
-                CLSCTX_ALL,
-                IID_INetworkListManager,
-                reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
-            );
+            bool comInitialized = SUCCEEDED(hrInit);
             
             bool shouldExecute = false;
-            if (SUCCEEDED(hr)) {
-                // Check connectivity first
-                NLM_CONNECTIVITY connectivity;
-                hr = pNetworkListManager->GetConnectivity(&connectivity);
+            {
+                // Create NetworkListManager instance
+                ComPtr<INetworkListManager> pNetworkListManager;
+                HRESULT hr = CoCreateInstance(
+                    CLSID_NetworkListManager,
+                    nullptr,
+                    CLSCTX_ALL,
+                    IID_INetworkListManager,
+                    reinterpret_cast<void**>(pNetworkListManager.GetAddressOf())
+                );
+
                 if (SUCCEEDED(hr)) {
-                    bool hasConnection = (connectivity & NLM_CONNECTIVITY_IPV4_INTERNET) ||
-                                        (connectivity & NLM_CONNECTIVITY_IPV6_INTERNET);
-                    
-                    if (hasConnection) {
-                        // Connected - now check if metered using INetworkCostManager
-                        ComPtr<INetworkCostManager> pCostManager;
-                        hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager, 
-                                                                 reinterpret_cast<void**>(pCostManager.GetAddressOf()));
-                        
-                        if (SUCCEEDED(hr)) {
-                            DWORD costFlags = 0;
-                            hr = pCostManager->GetCost(&costFlags, nullptr);
-                            
+                    // Check connectivity first
+                    NLM_CONNECTIVITY connectivity;
+                    hr = pNetworkListManager->GetConnectivity(&connectivity);
+                    if (SUCCEEDED(hr)) {
+                        bool hasConnection = (connectivity & NLM_CONNECTIVITY_IPV4_INTERNET) ||
+                                            (connectivity & NLM_CONNECTIVITY_IPV6_INTERNET);
+
+                        if (hasConnection) {
+                            // Connected - now check if metered using INetworkCostManager
+                            ComPtr<INetworkCostManager> pCostManager;
+                            hr = pNetworkListManager->QueryInterface(IID_INetworkCostManager,
+                                                                     reinterpret_cast<void**>(pCostManager.GetAddressOf()));
+
                             if (SUCCEEDED(hr)) {
-                                // Execute only if NOT metered
-                                shouldExecute = (costFlags == NLM_CONNECTION_COST_UNRESTRICTED);
+                                DWORD costFlags = 0;
+                                hr = pCostManager->GetCost(&costFlags, nullptr);
+
+                                if (SUCCEEDED(hr)) {
+                                    // Execute only if NOT metered
+                                    shouldExecute = (costFlags == NLM_CONNECTION_COST_UNRESTRICTED);
+                                }
+                                else {
+                                    // If cost check fails, assume unrestricted for safety
+                                    shouldExecute = true;
+                                }
                             }
                             else {
-                                // If cost check fails, assume unrestricted for safety
+                                // If cost manager not available, assume unrestricted
                                 shouldExecute = true;
                             }
                         }
-                        else {
-                            // If cost manager not available, assume unrestricted
-                            shouldExecute = true;
-                        }
                     }
                 }
-            }
-            
+            } // ComPtr released here, before CoUninitialize
+
             if (comInitialized) {
                 CoUninitialize();
             }
-            
+
             return shouldExecute;
         }
             
