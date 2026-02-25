@@ -1,4 +1,4 @@
-#include "CppUnitTest.h"
+﻿#include "CppUnitTest.h"
 #include "Config.h"
 #include "FileUtil.h"
 #include <Windows.h>
@@ -316,6 +316,39 @@ namespace lastexecuterecordmstest
 
 			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
 			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WithNetworkOptionInDefaults_ParsesCorrectly)
+		{
+			TempFile tmp(L"netoptdefaults.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"defaults\": {\n"
+				L"    \"networkOption\": 0\n"
+				L"  },\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(0, static_cast<int>(cfg.networkOption));
+		}
+
+		TEST_METHOD(Load_WithNetworkOptionInRootOverridesDefaults)
+		{
+			TempFile tmp(L"netoptoverride.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"networkOption\": 1,\n"
+				L"  \"defaults\": {\n"
+				L"    \"networkOption\": 0\n"
+				L"  },\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(1, static_cast<int>(cfg.networkOption));
 		}
 
 		TEST_METHOD(Load_WithInstallerWaitBehavior_Wait_ParsesCorrectly)
