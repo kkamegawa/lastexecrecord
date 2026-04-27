@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-mstest-results
           path: TestResults/**/*.trx
@@ -155,7 +155,7 @@ jobs:
           $checksums | Set-Content -Path (Join-Path $dist 'SHA256SUMS.txt') -Encoding ascii
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-dist
           path: dist/*
