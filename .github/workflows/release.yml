@@ -3,103 +3,179 @@ name: Release
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
+  build-package:
     runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Determine version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "Release tag must use SemVer format vMAJOR.MINOR.PATCH (tag: '$tag')"
+          }
+
+          $version = $tag.Substring(1)
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build tests (Debug x64)
+        run: |
+          msbuild .\src\lastexecuterecord\lastexecuterecord.vcxproj /m:1 /nr:false /p:Configuration=Debug /p:Platform=x64
+          msbuild .\src\lastexecuterecord.mstest\lastexecuterecord.mstest.vcxproj /m:1 /nr:false /p:Configuration=Debug /p:Platform=x64
+
+      - name: Run tests (MSTest)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $testDll = Get-ChildItem -Path "$env:GITHUB_WORKSPACE\src" -Recurse -Filter "lastexecuterecord.mstest.dll" |
+            Where-Object { $_.FullName -match "\\x64\\Debug\\" } |
+            Select-Object -First 1
+          if (-not $testDll) {
+            throw "Test DLL not found: lastexecuterecord.mstest.dll"
+          }
+
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsInstallPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.PackageGroup.TestTools.Core -property installationPath
+          if (-not $vsInstallPath) {
+            $vsInstallPath = & $vswhere -latest -products * -property installationPath
+          }
+          if (-not $vsInstallPath) {
+            throw "Visual Studio installation not found (vswhere returned empty)."
+          }
+
+          $vstestCandidates = @(
+            (Join-Path $vsInstallPath "Common7\IDE\Extensions\TestPlatform\vstest.console.exe"),
+            (Join-Path $vsInstallPath "Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe")
+          ) | Where-Object { Test-Path $_ }
+
+          if ($vstestCandidates.Count -eq 0) {
+            throw "vstest.console.exe not found under: $vsInstallPath"
+          }
+
+          $resultsDir = Join-Path $env:GITHUB_WORKSPACE "TestResults"
+          New-Item -ItemType Directory -Force -Path $resultsDir | Out-Null
+          & $vstestCandidates[0] $testDll.FullName /Platform:x64 /InIsolation /ResultsDirectory:$resultsDir /Logger:trx
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-mstest-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Build (Release x64)
+        run: msbuild .\src\lastexecuterecord\lastexecuterecord.vcxproj /m:1 /nr:false /p:Configuration=Release /p:Platform=x64
+
+      - name: Build (Release ARM64)
+        run: msbuild .\src\lastexecuterecord\lastexecuterecord.vcxproj /m:1 /nr:false /p:Configuration=Release /p:Platform=ARM64
+
+      - name: Package (zip)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $workspace = $env:GITHUB_WORKSPACE
+          $dist = Join-Path $workspace 'dist'
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          $readmePath = Join-Path $workspace 'README.md'
+          $licensePath = Join-Path $workspace 'LICENSE'
+          if (-not (Test-Path $readmePath)) {
+            throw "README.md not found at $readmePath"
+          }
+          if (-not (Test-Path $licensePath)) {
+            throw "LICENSE not found at $licensePath"
+          }
+
+          function New-PackageZip {
+            param(
+              [Parameter(Mandatory=$true)][string]$arch,
+              [Parameter(Mandatory=$true)][string]$platformFolder
+            )
+
+            $exe = Get-ChildItem -Path (Join-Path $workspace 'src') -Recurse -Filter 'lastexecuterecord.exe' |
+              Where-Object { $_.FullName -match "\\$platformFolder\\Release\\" } |
+              Select-Object -First 1
+
+            if (-not $exe) {
+              throw "Executable not found for $arch (expected under src\\$platformFolder\\Release\\): lastexecuterecord.exe"
+            }
+
+            $stageDir = Join-Path $dist $arch
+            if (Test-Path $stageDir) {
+              Remove-Item -Recurse -Force $stageDir
+            }
+            New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+
+            Copy-Item -Path $exe.FullName -Destination (Join-Path $stageDir $exe.Name) -Force
+            Copy-Item -Path $readmePath -Destination (Join-Path $stageDir 'README.md') -Force
+            Copy-Item -Path $licensePath -Destination (Join-Path $stageDir 'LICENSE') -Force
+
+            $zipName = "lastexec_${env:VERSION}_${arch}.zip"
+            $zipPath = Join-Path $dist $zipName
+            if (Test-Path $zipPath) {
+              Remove-Item -Force $zipPath
+            }
+
+            Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $zipPath
+          }
+
+          New-PackageZip -arch 'x64' -platformFolder 'x64'
+          New-PackageZip -arch 'arm64' -platformFolder 'ARM64'
+
+          $checksums = Get-ChildItem -Path $dist -Filter '*.zip' |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = Get-FileHash -Algorithm SHA256 -Path $_.FullName
+              "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+            }
+          $checksums | Set-Content -Path (Join-Path $dist 'SHA256SUMS.txt') -Encoding ascii
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/*
+          retention-days: 7
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: build-package
+    timeout-minutes: 15
     permissions:
       contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'af752f21c9d79ba3df9cb0250ce2233933f58486'
-
-    - name: Install dependencies
-      run: vcpkg install
-
-    - name: Determine version
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-
-        $tag = '${{ github.ref_name }}'
-        $version = $tag
-        if ($version.StartsWith('v')) {
-          $version = $version.Substring(1)
-        }
-
-        if ([string]::IsNullOrWhiteSpace($version)) {
-          throw "Version is empty (tag: '$tag')"
-        }
-
-        "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
-    - name: Build (Release x64)
-      run: msbuild .\src\lastexecrecord.sln /m /p:Configuration=Release /p:Platform=x64
-
-    - name: Build (Release ARM64)
-      run: msbuild .\src\lastexecrecord.sln /m /p:Configuration=Release /p:Platform=ARM64
-
-    - name: Package (zip)
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-
-        $workspace = $env:GITHUB_WORKSPACE
-        $dist = Join-Path $workspace 'dist'
-        New-Item -ItemType Directory -Force -Path $dist | Out-Null
-
-        $readmePath = Join-Path $workspace 'README.md'
-        if (-not (Test-Path $readmePath)) {
-          throw "README.md not found at $readmePath"
-        }
-
-        function New-PackageZip {
-          param(
-            [Parameter(Mandatory=$true)][string]$arch,
-            [Parameter(Mandatory=$true)][string]$platformFolder
-          )
-
-          $exe = Get-ChildItem -Path (Join-Path $workspace 'src') -Recurse -Filter 'lastexecuterecord.exe' |
-            Where-Object { $_.FullName -match "\\$platformFolder\\Release\\" } |
-            Select-Object -First 1
-
-          if (-not $exe) {
-            throw "Executable not found for $arch (expected under src\\$platformFolder\\Release\\): lastexecuterecord.exe"
-          }
-
-          $stageDir = Join-Path $dist $arch
-          if (Test-Path $stageDir) {
-            Remove-Item -Recurse -Force $stageDir
-          }
-          New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
-
-          Copy-Item -Path $exe.FullName -Destination (Join-Path $stageDir $exe.Name) -Force
-          Copy-Item -Path $readmePath -Destination (Join-Path $stageDir 'README.md') -Force
-
-          $zipName = "lastexec_${env:VERSION}_${arch}.zip"
-          $zipPath = Join-Path $dist $zipName
-          if (Test-Path $zipPath) {
-            Remove-Item -Force $zipPath
-          }
-
-          Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $zipPath
-        }
-
-        New-PackageZip -arch 'x64' -platformFolder 'x64'
-        New-PackageZip -arch 'arm64' -platformFolder 'ARM64'
-
-    - name: Publish GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: dist/*.zip
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
