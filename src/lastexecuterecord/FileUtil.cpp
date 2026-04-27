@@ -1,5 +1,7 @@
-﻿#include "FileUtil.h"
+#include "FileUtil.h"
 
+#include <cwctype>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -31,10 +33,20 @@ bool fileExists(const std::wstring& path) {
     return (a & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
-static bool directoryExists(const std::wstring& path) {
+bool directoryExists(const std::wstring& path) {
     DWORD a = GetFileAttributesW(path.c_str());
     if (a == INVALID_FILE_ATTRIBUTES) return false;
     return (a & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+bool pathIsAbsolute(const std::wstring& path) {
+    if (path.size() >= 3 &&
+        std::iswalpha(path[0]) &&
+        path[1] == L':' &&
+        (path[2] == L'\\' || path[2] == L'/')) {
+        return true;
+    }
+    return path.size() >= 2 && path[0] == L'\\' && path[1] == L'\\';
 }
 
 void ensureDirectoryExists(const std::wstring& path) {
@@ -59,6 +71,32 @@ std::wstring getModulePath() {
     buf.resize(32768);
     DWORD n = GetModuleFileNameW(nullptr, &buf[0], static_cast<DWORD>(buf.size()));
     if (n == 0 || n >= buf.size()) throw win32Error("GetModuleFileNameW failed");
+    buf.resize(n);
+    return buf;
+}
+
+std::wstring getFullPath(const std::wstring& path) {
+    DWORD needed = GetFullPathNameW(path.c_str(), 0, nullptr, nullptr);
+    if (needed == 0) throw win32Error("GetFullPathNameW failed");
+
+    std::wstring full;
+    full.resize(needed);
+    DWORD n = GetFullPathNameW(path.c_str(), needed, &full[0], nullptr);
+    if (n == 0 || n >= needed) throw win32Error("GetFullPathNameW failed");
+    full.resize(n);
+    return full;
+}
+
+std::wstring getSystemDirectoryPath() {
+    std::wstring buf;
+    buf.resize(MAX_PATH);
+    UINT n = GetSystemDirectoryW(&buf[0], static_cast<UINT>(buf.size()));
+    if (n == 0) throw win32Error("GetSystemDirectoryW failed");
+    if (n >= buf.size()) {
+        buf.resize(static_cast<size_t>(n) + 1);
+        n = GetSystemDirectoryW(&buf[0], static_cast<UINT>(buf.size()));
+        if (n == 0 || n >= buf.size()) throw win32Error("GetSystemDirectoryW failed");
+    }
     buf.resize(n);
     return buf;
 }
@@ -124,15 +162,23 @@ std::wstring readUtf8FileToWString(const std::wstring& path) {
     std::string bytes;
     bytes.resize(static_cast<size_t>(size.QuadPart));
 
-    DWORD read = 0;
     if (size.QuadPart > 0) {
-        if (!ReadFile(h, &bytes[0], static_cast<DWORD>(bytes.size()), &read, nullptr)) {
-            CloseHandle(h);
-            throw win32Error("ReadFile failed");
+        size_t totalRead = 0;
+        while (totalRead < bytes.size()) {
+            DWORD toRead = static_cast<DWORD>(bytes.size() - totalRead);
+            DWORD bytesRead = 0;
+            if (!ReadFile(h, &bytes[totalRead], toRead, &bytesRead, nullptr)) {
+                CloseHandle(h);
+                throw win32Error("ReadFile failed");
+            }
+            if (bytesRead == 0) {
+                CloseHandle(h);
+                throw std::runtime_error("ReadFile returned fewer bytes than expected");
+            }
+            totalRead += bytesRead;
         }
-        bytes.resize(read);
     }
-    CloseHandle(h);
+    if (!CloseHandle(h)) throw win32Error("CloseHandle(read) failed");
 
     // strip UTF-8 BOM
     if (bytes.size() >= 3 &&
@@ -145,13 +191,25 @@ std::wstring readUtf8FileToWString(const std::wstring& path) {
 }
 
 void writeWStringToUtf8FileAtomic(const std::wstring& path, const std::wstring& content) {
-    std::wstring dir = getDirectoryName(path);
-    std::wstring tmp = path + L".tmp";
-
     std::string bytes = wStringToUtf8(content);
+    if (bytes.size() > (std::numeric_limits<DWORD>::max)()) {
+        throw std::runtime_error("Content too large to write");
+    }
 
-    HANDLE h = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) throw win32Error("CreateFileW(write tmp) failed");
+    std::wstring tmp;
+    HANDLE h = INVALID_HANDLE_VALUE;
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        tmp = path + L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
+            std::to_wstring(GetTickCount64()) + L"." + std::to_wstring(attempt) + L".tmp";
+        h = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY, nullptr);
+        if (h != INVALID_HANDLE_VALUE) break;
+        DWORD e = GetLastError();
+        if (e != ERROR_FILE_EXISTS && e != ERROR_ALREADY_EXISTS) {
+            throw win32Error("CreateFileW(write tmp) failed");
+        }
+    }
+    if (h == INVALID_HANDLE_VALUE) throw std::runtime_error("Unable to create unique temporary file");
 
     DWORD written = 0;
     if (!bytes.empty()) {
@@ -161,8 +219,15 @@ void writeWStringToUtf8FileAtomic(const std::wstring& path, const std::wstring& 
             throw win32Error("WriteFile failed");
         }
     }
-    FlushFileBuffers(h);
-    CloseHandle(h);
+    if (!FlushFileBuffers(h)) {
+        CloseHandle(h);
+        DeleteFileW(tmp.c_str());
+        throw win32Error("FlushFileBuffers failed");
+    }
+    if (!CloseHandle(h)) {
+        DeleteFileW(tmp.c_str());
+        throw win32Error("CloseHandle(write tmp) failed");
+    }
 
     if (!MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
         DeleteFileW(tmp.c_str());

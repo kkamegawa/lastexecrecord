@@ -34,8 +34,9 @@ After installation, you can run `lastexecuterecord.exe` from your terminal.
 - `lastexecuterecord.exe --config <path>`: Specify a custom config JSON path
 - `lastexecuterecord.exe --dry-run`: Do not execute; only show decisions
 - `lastexecuterecord.exe --verbose`: Verbose logs (including skip reasons)
+- `lastexecuterecord.exe --lock-timeout <seconds>`: Maximum time to wait for the config lock (default: 300)
 
-All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose`
+All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose --lock-timeout 60`
 
 ### Windows Terminal Profile Setup
 
@@ -71,34 +72,37 @@ Example: `lastexecuterecord.sample.json`
 
 ### Root fields
 
-- `version` (number, optional): Default is 1
-- `networkOption` (number, optional): Control execution based on network status. Default is 2
+- `version` (integer, optional): Default is 1
+- `networkOption` (integer, optional): Control execution based on network status. Default is 2
   - `0`: Execute only when internet is connected (not on metered connections)
   - `1`: Execute even on metered connections (internet connection required)
   - `2`: Always execute (ignore network status)
-- `defaults.minIntervalSeconds` (number, optional): Default minimum interval for commands
-- `defaults.timeoutSeconds` (number, optional): Default timeout for commands
+  - If network status cannot be verified for option `0` or `1`, execution is skipped. `--verbose` prints the check failure code.
+- `defaults.minIntervalSeconds` (integer, optional): Default minimum interval for commands
+- `defaults.timeoutSeconds` (integer, optional): Default timeout for commands
 - `defaults.installerWaitBehavior` (string or number, optional): Default behavior when installer is running. Default is `"wait"`
   - `"wait"` or `0`: Wait for installer to finish before executing
   - `"skip"` or `1`: Skip command if installer is running
-- `defaults.installerWaitSeconds` (number, optional): Wait time in seconds between installer checks. Default is 30
-- `defaults.installerMaxRetries` (number, optional): Maximum number of retries when waiting. Default is 10
+- `defaults.installerWaitSeconds` (integer, optional): Wait time in seconds between installer checks. Default is 30
+- `defaults.installerMaxRetries` (integer, optional): Maximum number of retries when waiting. Default is 10
 - `commands` (array, required): List of commands to run (processed from top to bottom)
 
 ### Command fields
 
 - `name` (string, required): Display name / identifier
 - `enabled` (bool, optional): Default is true
-- `exe` (string, required): Executable path (**not a shell string; use exe + args**)
+- `exe` (string, required): Absolute path to an existing executable file (**not a shell string; use exe + args**)
 - `args` (array of string, optional): Arguments
-- `workingDirectory` (string, optional)
-- `minIntervalSeconds` (number, optional): Defaults to `defaults.minIntervalSeconds`
-- `timeoutSeconds` (number, optional): Defaults to `defaults.timeoutSeconds`
+- `workingDirectory` (string, optional): Absolute path to an existing directory when set
+- `minIntervalSeconds` (integer, optional): Defaults to `defaults.minIntervalSeconds`
+- `timeoutSeconds` (integer, optional): Defaults to `defaults.timeoutSeconds`
 - `installerWaitBehavior` (string or number, optional): Behavior when installer is running. Defaults to `defaults.installerWaitBehavior`
-- `installerWaitSeconds` (number, optional): Wait time between checks. Defaults to `defaults.installerWaitSeconds`
-- `installerMaxRetries` (number, optional): Maximum retries. Defaults to `defaults.installerMaxRetries`
+- `installerWaitSeconds` (integer, optional): Wait time between checks. Defaults to `defaults.installerWaitSeconds`
+- `installerMaxRetries` (integer, optional): Maximum retries. Defaults to `defaults.installerMaxRetries`
 - `lastRunUtc` (string, optional): Example `2026-01-02T12:34:56Z` (seconds precision)
-- `lastExitCode` (number, optional): Previous exit code
+- `lastExitCode` (integer, optional): Previous exit code
+
+JSON must be strict JSON: comments, duplicate object keys, unescaped control characters, and fractional values for integer fields are rejected.
 
 ### sample(winget)
 
@@ -129,7 +133,9 @@ Example: `lastexecuterecord.sample.json`
 ## Notes (security)
 
 - The config uses `exe` + `args[]` and does not assume shell execution like `cmd.exe /c` (helps reduce injection risk).
+- `exe` must be an absolute path to an existing executable file. `workingDirectory`, when set, must be an absolute path to an existing directory.
 - To prevent concurrent runs, the program acquires an exclusive `<config>.lock` file.
+- Config updates are written atomically through a unique same-directory temporary file. The default lock wait is bounded to 300 seconds and can be changed with `--lock-timeout`.
 - **DO NOT** use environment variables or user input to construct `exe` or `args` in the config file, as this may lead to command injection vulnerabilities.
 
 ## Installer detection and wait behavior
@@ -169,8 +175,8 @@ This behavior is controlled by the `installerWaitBehavior` configuration field (
   "commands": [
     {
       "name": "system update",
-      "exe": "winget.exe",
-      "args": ["upgrade", "--all"],
+      "exe": "C:\\Windows\\System32\\sudo.exe",
+      "args": ["winget", "upgrade", "--all"],
       "installerWaitBehavior": "wait"
     }
   ]
@@ -181,7 +187,7 @@ This behavior is controlled by the `installerWaitBehavior` configuration field (
 
 ### Building
 
-This project uses Visual Studio 2022/2025 or MSBuild.
+This project uses Visual Studio 2022/2026 or MSBuild.
 
 **Visual Studio:**
 ```cmd

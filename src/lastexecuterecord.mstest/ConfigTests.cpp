@@ -23,6 +23,25 @@ namespace lastexecuterecordmstest
 		return path;
 	}
 
+	static std::wstring jsonEscapeString(const std::wstring& value) {
+		std::wstring escaped;
+		for (wchar_t c : value) {
+			if (c == L'\\' || c == L'"') {
+				escaped.push_back(L'\\');
+			}
+			escaped.push_back(c);
+		}
+		return escaped;
+	}
+
+	static std::wstring validExePath() {
+		return ler::joinPath(ler::getSystemDirectoryPath(), L"whoami.exe");
+	}
+
+	static std::wstring validExeForJson() {
+		return jsonEscapeString(validExePath());
+	}
+
 	// RAII helper for temp files
 	class TempFile {
 	public:
@@ -110,7 +129,7 @@ namespace lastexecuterecordmstest
 				L"{\n"
 				L"  \"version\": 1,\n"
 				L"  \"commands\": [\n"
-				L"    { \"name\": \"custom\", \"exe\": \"test.exe\" }\n"
+				L"    { \"name\": \"custom\", \"exe\": \"" + validExeForJson() + L"\" }\n"
 				L"  ]\n"
 				L"}\n";
 			ler::writeWStringToUtf8FileAtomic(configPath, customContent);
@@ -158,14 +177,83 @@ namespace lastexecuterecordmstest
 				L"{\n"
 				L"  \"version\": 1,\n"
 				L"  \"commands\": [\n"
-				L"    { \"name\": \"c1\", \"exe\": \"C:\\\\Windows\\\\System32\\\\whoami.exe\" }\n"
+				L"    { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" }\n"
 				L"  ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
 			Assert::AreEqual(1u, static_cast<unsigned>(cfg.commands.size()));
 			Assert::AreEqual(std::wstring(L"c1"), cfg.commands[0].name);
-			Assert::AreEqual(std::wstring(L"C:\\Windows\\System32\\whoami.exe"), cfg.commands[0].exe);
+			Assert::AreEqual(validExePath(), cfg.commands[0].exe);
+		}
+
+		TEST_METHOD(Load_CommandExeRelative_Throws)
+		{
+			TempFile tmp(L"relativeexe.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"whoami.exe\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_CommandExeMissingFile_Throws)
+		{
+			TempFile tmp(L"missingexe.json");
+			std::wstring missingExe = jsonEscapeString(makeTempPath(L"missing.exe"));
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + missingExe + L"\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WorkingDirectoryRelative_Throws)
+		{
+			TempFile tmp(L"relativewd.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\", \"workingDirectory\": \"relative\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WorkingDirectoryMissing_Throws)
+		{
+			TempFile tmp(L"missingwd.json");
+			std::wstring missingDir = jsonEscapeString(makeTempPath(L"missing_dir"));
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\", \"workingDirectory\": \"" + missingDir + L"\" } ]\n"
+				L"}\n");
+
+			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Load_WorkingDirectoryAbsoluteExisting_ParsesCorrectly)
+		{
+			TempDirectory tempDir(L"validwd");
+			CreateDirectoryW(tempDir.path.c_str(), nullptr);
+			TempFile tmp(L"validwd.json");
+
+			ler::writeWStringToUtf8FileAtomic(tmp.path,
+				L"{\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\", \"workingDirectory\": \"" + jsonEscapeString(tempDir.path) + L"\" } ]\n"
+				L"}\n");
+
+			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
+			Assert::AreEqual(tempDir.path, cfg.commands[0].workingDirectory);
 		}
 
 		TEST_METHOD(Load_CommandNameMissing_Throws)
@@ -200,7 +288,7 @@ namespace lastexecuterecordmstest
 
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -220,7 +308,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"lastRunUtc\": \"2026-01-02T12:34:56Z\",\n"
 				L"      \"lastExitCode\": 0\n"
 				L"    }\n"
@@ -241,7 +329,7 @@ namespace lastexecuterecordmstest
 
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -270,7 +358,7 @@ namespace lastexecuterecordmstest
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
 				L"  \"networkOption\": 1,\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -283,7 +371,7 @@ namespace lastexecuterecordmstest
 
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -297,7 +385,7 @@ namespace lastexecuterecordmstest
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
 				L"  \"networkOption\": 5,\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
@@ -311,7 +399,7 @@ namespace lastexecuterecordmstest
 			ler::writeWStringToUtf8FileAtomic(tmp.path,
 				L"{\n"
 				L"  \"networkOption\": -1,\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			auto func = [&tmp]() { ler::loadAndValidateConfig(tmp.path); };
@@ -327,7 +415,7 @@ namespace lastexecuterecordmstest
 				L"  \"defaults\": {\n"
 				L"    \"networkOption\": 0\n"
 				L"  },\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -344,7 +432,7 @@ namespace lastexecuterecordmstest
 				L"  \"defaults\": {\n"
 				L"    \"networkOption\": 0\n"
 				L"  },\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -360,7 +448,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitBehavior\": \"wait\"\n"
 				L"    }\n"
 				L"  ]\n"
@@ -380,7 +468,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitBehavior\": \"skip\"\n"
 				L"    }\n"
 				L"  ]\n"
@@ -400,7 +488,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitBehavior\": 1\n"
 				L"    }\n"
 				L"  ]\n"
@@ -420,7 +508,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitBehavior\": \"invalid\"\n"
 				L"    }\n"
 				L"  ]\n"
@@ -439,7 +527,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitSeconds\": 60\n"
 				L"    }\n"
 				L"  ]\n"
@@ -459,7 +547,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerMaxRetries\": 5\n"
 				L"    }\n"
 				L"  ]\n"
@@ -481,7 +569,7 @@ namespace lastexecuterecordmstest
 				L"    \"installerWaitSeconds\": 45,\n"
 				L"    \"installerMaxRetries\": 20\n"
 				L"  },\n"
-				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"x.exe\" } ]\n"
+				L"  \"commands\": [ { \"name\": \"c1\", \"exe\": \"" + validExeForJson() + L"\" } ]\n"
 				L"}\n");
 
 			ler::AppConfig cfg = ler::loadAndValidateConfig(tmp.path);
@@ -503,7 +591,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerWaitSeconds\": -5\n"
 				L"    }\n"
 				L"  ]\n"
@@ -522,7 +610,7 @@ namespace lastexecuterecordmstest
 				L"  \"commands\": [\n"
 				L"    {\n"
 				L"      \"name\": \"c1\",\n"
-				L"      \"exe\": \"x.exe\",\n"
+				L"      \"exe\": \"" + validExeForJson() + L"\",\n"
 				L"      \"installerMaxRetries\": -1\n"
 				L"    }\n"
 				L"  ]\n"

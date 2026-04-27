@@ -5,9 +5,9 @@
 ## Entry point
 
 - `src/lastexecuterecord/main.cpp`
-  - `wmain` 実装
-  - `--config`, `--dry-run`, `--verbose`
-  - コマンドの順次実行、スキップ判定、config の更新
+   - `wmain` 実装
+   - `--config`, `--dry-run`, `--verbose`, `--lock-timeout`
+   - コマンドの順次実行、スキップ判定、config の更新
 
 ## Config
 
@@ -27,6 +27,7 @@
   - `readUtf8FileToWString(path)`
   - `writeWStringToUtf8FileAtomic(path, content)`
   - `acquireLockFile(path)`
+  - path helpers: `getFullPath(path)`, `pathIsAbsolute(path)`, `fileExists(path)`, `directoryExists(path)`
 
 ## Time
 
@@ -44,14 +45,16 @@
 ## Network checking
 
 - `src/lastexecuterecord/NetworkUtil.h/.cpp`
-  - `hasInternetConnection()`
-  - `isConnectionMetered()`
-  - `shouldExecuteBasedOnNetwork(option)`
-  - `NetworkOption` enum: ExecuteWhenConnected(0), ExecuteOnMetered(1), AlwaysExecute(2)
+   - `hasInternetConnection()`
+   - `isConnectionMetered()`
+   - `shouldExecuteBasedOnNetwork(option)`
+   - `evaluateNetworkOption(option)` - returns whether execution should proceed and whether network status was verified
+   - `NetworkOption` enum: ExecuteWhenConnected(0), ExecuteOnMetered(1), AlwaysExecute(2)
 
 ## Installer detection
 
-- `src/lastexecuterecord/InstallerUtil.h/.cpp`
+  - `src/lastexecuterecord/InstallerUtil.h/.cpp`
+  - `checkInstallerRunning()` - Returns Running/NotRunning/CheckFailed status
   - `isInstallerRunning()` - Checks if installer processes (msiexec.exe, setup.exe, etc.) are running
   - `waitForInstallerToFinish(waitSeconds, maxRetries)` - Waits for installer to finish with retries
   - Uses `CreateToolhelp32Snapshot` and process enumeration APIs

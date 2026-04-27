@@ -31,39 +31,52 @@ static bool isInstallerProcess(const std::wstring& processName) {
 }
 
 bool isInstallerRunning() {
+    return checkInstallerRunning().status == InstallerCheckStatus::Running;
+}
+
+InstallerCheckResult checkInstallerRunning() {
     // Create a snapshot of all running processes
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) {
-        return false; // Can't check, assume not running
+        return InstallerCheckResult{ InstallerCheckStatus::CheckFailed, GetLastError() };
     }
 
     PROCESSENTRY32W pe32{};
     pe32.dwSize = sizeof(PROCESSENTRY32W);
 
-    bool installerFound = false;
+    InstallerCheckResult result{ InstallerCheckStatus::NotRunning, 0 };
 
     // Get the first process
     if (Process32FirstW(hSnapshot, &pe32)) {
         do {
             std::wstring exeFile(pe32.szExeFile);
             if (isInstallerProcess(exeFile)) {
-                installerFound = true;
+                result.status = InstallerCheckStatus::Running;
                 break;
             }
         } while (Process32NextW(hSnapshot, &pe32));
     }
+    else {
+        result.status = InstallerCheckStatus::CheckFailed;
+        result.errorCode = GetLastError();
+    }
 
     CloseHandle(hSnapshot);
-    return installerFound;
+    return result;
 }
 
 bool waitForInstallerToFinish(std::int64_t waitSeconds, std::int64_t maxRetries) {
     if (maxRetries <= 0) {
         maxRetries = 1; // At least check once
     }
+    if (waitSeconds <= 0) {
+        waitSeconds = 1; // Avoid a tight retry loop
+    }
 
     for (std::int64_t attempt = 0; attempt < maxRetries; attempt++) {
-        if (!isInstallerRunning()) {
+        InstallerCheckResult check = checkInstallerRunning();
+        if (check.status == InstallerCheckStatus::NotRunning ||
+            check.status == InstallerCheckStatus::CheckFailed) {
             return true; // Installer finished or not running
         }
 

@@ -72,9 +72,10 @@ README には「NTFS data stream (ADS) に最終実行時刻を記録」とだ�
 
 ### 4.1 CLI
 
-- `--config PATH` : config JSON を指定（未指定なら exe と同名の `.json`）
+- `--config PATH` : config JSON を指定（未指定なら `%USERPROFILE%\.lastexecrecord\config.json`）
 - `--dry-run` : 実行せず、実行/スキップの判定だけ表示
 - `--verbose` : 詳細ログ（スキップ理由など）
+- `--lock-timeout SECONDS` : config lock の待機上限（既定 300 秒）
 
 ### 4.2 スキップ条件
 
@@ -94,13 +95,17 @@ README には「NTFS data stream (ADS) に最終実行時刻を記録」とだ�
 - File I/O: `src/lastexecuterecord/FileUtil.h/.cpp`
 - Time: `src/lastexecuterecord/TimeUtil.h/.cpp`
 - Process: `src/lastexecuterecord/CommandRunner.h/.cpp`
+- Network: `src/lastexecuterecord/NetworkUtil.h/.cpp`
+- Installer: `src/lastexecuterecord/InstallerUtil.h/.cpp`
 
 ## 6. 既知の制約 / 今後の改善候補
 
 - この環境では msbuild が見つからず、こちら側での実ビルド検証は未実施（VS/Build Tools 環境で確認が必要）。
-- exe パスの絶対パス強制や正規化は現状最小限（必要なら Win32 API で強化）。
+- exe パスは絶対パスかつ既存ファイル必須。`workingDirectory` も指定時は絶対パスかつ既存ディレクトリ必須。
 - `cmd.exe` / `powershell.exe` を禁止しているわけではない（exe に指定すれば動く）。
   - セキュリティ優先なら禁止ポリシーや allow-list の導入を検討。
+- `networkOption` がネットワーク状態を要求する場合、状態を検証できなければ fail closed でスキップする。
+- installer 状態を検証できない場合は verbose 警告を出し、ブロック回避のため実行を継続する。
 - config 更新を「成功時のみ」にする/「開始時に予約する」などのポリシー確定が必要。
 - ADS（NTFS data stream）へ記録する要件が復活した場合は、state専用ファイルの ADS に JSON を保存する方式を検討。
 

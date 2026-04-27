@@ -9,10 +9,14 @@ std::wstring getModulePath();
 std::wstring changeExtension(const std::wstring& path, const std::wstring& extWithDot);
 std::wstring getDirectoryName(const std::wstring& path);
 std::wstring joinPath(const std::wstring& dir, const std::wstring& leaf);
+std::wstring getFullPath(const std::wstring& path);
+std::wstring getSystemDirectoryPath();
 
 // Win32 helpers
 std::wstring getEnvVar(const wchar_t* name);
 bool fileExists(const std::wstring& path);
+bool directoryExists(const std::wstring& path);
+bool pathIsAbsolute(const std::wstring& path);
 void ensureDirectoryExists(const std::wstring& path);
 
 // UTF-8 file IO (accepts UTF-8 with/without BOM)

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Visual Studio 2022/2025 with C++ workload
+- Visual Studio 2022/2026 with C++ workload
 - Microsoft Unit Testing Framework for C++ (included with Visual Studio)
 
 ## Build and run

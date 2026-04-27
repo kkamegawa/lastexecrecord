@@ -21,6 +21,16 @@ namespace lastexecuterecordmstest
 			(void)result; // Acknowledge we're not asserting the value
 		}
 
+		TEST_METHOD(CheckInstallerRunning_ReturnsKnownStatus)
+		{
+			ler::InstallerCheckResult result = ler::checkInstallerRunning();
+			bool knownStatus =
+				result.status == ler::InstallerCheckStatus::NotRunning ||
+				result.status == ler::InstallerCheckStatus::Running ||
+				result.status == ler::InstallerCheckStatus::CheckFailed;
+			Assert::IsTrue(knownStatus);
+		}
+
 		TEST_METHOD(WaitForInstallerToFinish_ReturnsBoolean)
 		{
 			// Verify the function handles edge cases gracefully

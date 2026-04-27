@@ -6,10 +6,17 @@
 
 namespace ler {
 
+static constexpr int kMaxJsonDepth = 256;
+
 static std::string narrowContext(const wchar_t* wctx) {
     if (!wctx) return "";
     std::wstring ws(wctx);
-    return std::string(ws.begin(), ws.end());
+    std::string out;
+    out.reserve(ws.size());
+    for (wchar_t c : ws) {
+        out.push_back(c >= 0 && c <= 0x7F ? static_cast<char>(c) : '?');
+    }
+    return out;
 }
 
 const JsonValue* JsonValue::tryGet(const std::wstring& key) const {
@@ -38,11 +45,7 @@ const std::wstring& JsonValue::asString(const wchar_t* ctx) const {
 std::int64_t JsonValue::asInt(const wchar_t* ctx) const {
     if (type == Type::Int) return i;
     if (type == Type::Double) {
-        if (d < static_cast<double>(std::numeric_limits<std::int64_t>::min()) ||
-            d > static_cast<double>(std::numeric_limits<std::int64_t>::max())) {
-            throw JsonParseError("Number out of int64 range at " + narrowContext(ctx));
-        }
-        return static_cast<std::int64_t>(d);
+        throw JsonParseError("Expected integer at " + narrowContext(ctx));
     }
     throw JsonParseError("Expected number at " + narrowContext(ctx));
 }
@@ -60,8 +63,16 @@ struct Parser {
 
     explicit Parser(const std::wstring& text) : t(text) {}
 
+    static bool isJsonWhitespace(wchar_t c) {
+        return c == L' ' || c == L'\t' || c == L'\r' || c == L'\n';
+    }
+
+    static bool isJsonDigit(wchar_t c) {
+        return c >= L'0' && c <= L'9';
+    }
+
     void skipWs() {
-        while (p < t.size() && iswspace(t[p])) p++;
+        while (p < t.size() && isJsonWhitespace(t[p])) p++;
     }
 
     wchar_t peek() {
@@ -120,7 +131,7 @@ struct Parser {
         std::wstring out;
         while (p < t.size()) {
             wchar_t c = t[p++];
-            if (c == L'\"') break;
+            if (c == L'\"') return out;
             if (c == L'\\') {
                 if (p >= t.size()) throw JsonParseError("Invalid escape");
                 wchar_t e = t[p++];
@@ -142,24 +153,24 @@ struct Parser {
                         u = static_cast<uint16_t>((u << 4) | hv);
                     }
                     if (isHighSurrogate(u)) {
-                        // try surrogate pair
-                        size_t save = p;
-                        if (p + 6 <= t.size() && t[p] == L'\\' && t[p + 1] == L'u') {
-                            p += 2;
-                            uint16_t u2 = 0;
-                            for (int k = 0; k < 4; k++) {
-                                int hv = hexVal(t[p++]);
-                                if (hv < 0) throw JsonParseError("Invalid unicode escape");
-                                u2 = static_cast<uint16_t>((u2 << 4) | hv);
-                            }
-                            if (isLowSurrogate(u2)) {
-                                uint32_t cp = 0x10000 + (((u - 0xD800) << 10) | (u2 - 0xDC00));
-                                appendCodepoint(out, cp);
-                                break;
-                            }
+                        if (p + 6 > t.size() || t[p] != L'\\' || t[p + 1] != L'u') {
+                            throw JsonParseError("Invalid unicode surrogate pair");
                         }
-                        p = save;
-                        out.push_back(static_cast<wchar_t>(u));
+                        p += 2;
+                        uint16_t u2 = 0;
+                        for (int k = 0; k < 4; k++) {
+                            int hv = hexVal(t[p++]);
+                            if (hv < 0) throw JsonParseError("Invalid unicode escape");
+                            u2 = static_cast<uint16_t>((u2 << 4) | hv);
+                        }
+                        if (!isLowSurrogate(u2)) {
+                            throw JsonParseError("Invalid unicode surrogate pair");
+                        }
+                        uint32_t cp = 0x10000 + (((u - 0xD800) << 10) | (u2 - 0xDC00));
+                        appendCodepoint(out, cp);
+                    }
+                    else if (isLowSurrogate(u)) {
+                        throw JsonParseError("Invalid unicode surrogate pair");
                     }
                     else {
                         out.push_back(static_cast<wchar_t>(u));
@@ -171,10 +182,13 @@ struct Parser {
                 }
             }
             else {
+                if (c >= 0 && c <= 0x1F) {
+                    throw JsonParseError("Unescaped control character in string");
+                }
                 out.push_back(c);
             }
         }
-        return out;
+        throw JsonParseError("Unterminated string");
     }
 
     JsonValue parseNumber() {
@@ -185,22 +199,22 @@ struct Parser {
             p++;
         }
         else {
-            if (!iswdigit(peek())) throw JsonParseError("Invalid number");
-            while (iswdigit(peek())) p++;
+            if (!isJsonDigit(peek())) throw JsonParseError("Invalid number");
+            while (isJsonDigit(peek())) p++;
         }
         bool isFloat = false;
         if (peek() == L'.') {
             isFloat = true;
             p++;
-            if (!iswdigit(peek())) throw JsonParseError("Invalid number");
-            while (iswdigit(peek())) p++;
+            if (!isJsonDigit(peek())) throw JsonParseError("Invalid number");
+            while (isJsonDigit(peek())) p++;
         }
         if (peek() == L'e' || peek() == L'E') {
             isFloat = true;
             p++;
             if (peek() == L'+' || peek() == L'-') p++;
-            if (!iswdigit(peek())) throw JsonParseError("Invalid number");
-            while (iswdigit(peek())) p++;
+            if (!isJsonDigit(peek())) throw JsonParseError("Invalid number");
+            while (isJsonDigit(peek())) p++;
         }
 
         std::wstring num = t.substr(start, p - start);
@@ -212,8 +226,11 @@ struct Parser {
                 if (idx != num.size()) throw JsonParseError("Invalid number");
                 return JsonValue::makeInt(static_cast<std::int64_t>(v));
             }
-            catch (...) {
-                // fallback to double
+            catch (const std::out_of_range&) {
+                throw JsonParseError("Number out of int64 range");
+            }
+            catch (const std::invalid_argument&) {
+                throw JsonParseError("Invalid number");
             }
         }
 
@@ -223,18 +240,22 @@ struct Parser {
             if (idx != num.size()) throw JsonParseError("Invalid number");
             return JsonValue::makeDouble(dv);
         }
-        catch (...) {
+        catch (const std::out_of_range&) {
+            throw JsonParseError("Number out of double range");
+        }
+        catch (const std::invalid_argument&) {
             throw JsonParseError("Invalid number");
         }
     }
 
-    JsonValue parseArray() {
+    JsonValue parseArray(int depth) {
+        if (depth > kMaxJsonDepth) throw JsonParseError("JSON nesting too deep");
         expect(L'[', "Expected [");
         std::vector<JsonValue> arr;
         skipWs();
         if (consume(L']')) return JsonValue::makeArray(std::move(arr));
         while (true) {
-            arr.push_back(parseValue());
+            arr.push_back(parseValue(depth + 1));
             skipWs();
             if (consume(L',')) continue;
             expect(L']', "Expected ]");
@@ -243,7 +264,8 @@ struct Parser {
         return JsonValue::makeArray(std::move(arr));
     }
 
-    JsonValue parseObject() {
+    JsonValue parseObject(int depth) {
+        if (depth > kMaxJsonDepth) throw JsonParseError("JSON nesting too deep");
         expect(L'{', "Expected {");
         std::vector<std::pair<std::wstring, JsonValue>> obj;
         skipWs();
@@ -253,7 +275,12 @@ struct Parser {
             std::wstring key = parseString();
             skipWs();
             expect(L':', "Expected :");
-            JsonValue value = parseValue();
+            for (const auto& existing : obj) {
+                if (existing.first == key) {
+                    throw JsonParseError("Duplicate object key");
+                }
+            }
+            JsonValue value = parseValue(depth + 1);
             obj.push_back(std::make_pair(std::move(key), std::move(value)));
             skipWs();
             if (consume(L',')) continue;
@@ -263,13 +290,14 @@ struct Parser {
         return JsonValue::makeObject(std::move(obj));
     }
 
-    JsonValue parseValue() {
+    JsonValue parseValue(int depth = 0) {
+        if (depth > kMaxJsonDepth) throw JsonParseError("JSON nesting too deep");
         skipWs();
         wchar_t c = peek();
         if (c == L'\"') return JsonValue::makeString(parseString());
-        if (c == L'{') return parseObject();
-        if (c == L'[') return parseArray();
-        if (c == L'-' || iswdigit(c)) return parseNumber();
+        if (c == L'{') return parseObject(depth + 1);
+        if (c == L'[') return parseArray(depth + 1);
+        if (c == L'-' || isJsonDigit(c)) return parseNumber();
         if (matchLiteral(L"true")) return JsonValue::makeBool(true);
         if (matchLiteral(L"false")) return JsonValue::makeBool(false);
         if (matchLiteral(L"null")) return JsonValue::makeNull();

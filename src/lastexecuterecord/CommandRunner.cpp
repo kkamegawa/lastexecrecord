@@ -6,8 +6,51 @@
 
 namespace ler {
 
+namespace {
+
+class ScopedHandle {
+public:
+    ScopedHandle() = default;
+    explicit ScopedHandle(HANDLE handle) : h_(handle) {}
+    ScopedHandle(const ScopedHandle&) = delete;
+    ScopedHandle& operator=(const ScopedHandle&) = delete;
+
+    ScopedHandle(ScopedHandle&& other) noexcept : h_(other.h_) {
+        other.h_ = INVALID_HANDLE_VALUE;
+    }
+
+    ScopedHandle& operator=(ScopedHandle&& other) noexcept {
+        if (this != &other) {
+            reset();
+            h_ = other.h_;
+            other.h_ = INVALID_HANDLE_VALUE;
+        }
+        return *this;
+    }
+
+    ~ScopedHandle() {
+        reset();
+    }
+
+    HANDLE get() const { return h_; }
+
+    void reset(HANDLE handle = INVALID_HANDLE_VALUE) {
+        if (h_ != INVALID_HANDLE_VALUE && h_ != nullptr) {
+            CloseHandle(h_);
+        }
+        h_ = handle;
+    }
+
+private:
+    HANDLE h_ = INVALID_HANDLE_VALUE;
+};
+
+} // namespace
+
 std::wstring quoteArgForWindowsCommandLine(const std::wstring& arg) {
     // Rules aligned with CommandLineToArgvW / MS C runtime parsing.
+    if (arg.empty()) return L"\"\"";
+
     bool needsQuotes = false;
     for (wchar_t c : arg) {
         if (c == L' ' || c == L'\t' || c == L'\n' || c == L'\v' || c == L'\"') {
@@ -101,6 +144,8 @@ RunResult runProcess(const std::wstring& exePath,
     }
 
     rr.started = true;
+    ScopedHandle threadHandle(pi.hThread);
+    ScopedHandle processHandle(pi.hProcess);
 
     DWORD waitMs = INFINITE;
     if (timeoutSeconds > 0) {
@@ -112,19 +157,35 @@ RunResult runProcess(const std::wstring& exePath,
         }
     }
 
-    DWORD w = WaitForSingleObject(pi.hProcess, waitMs);
+    DWORD w = WaitForSingleObject(processHandle.get(), waitMs);
     if (w == WAIT_TIMEOUT) {
         rr.timedOut = true;
-        TerminateProcess(pi.hProcess, 1);
-        WaitForSingleObject(pi.hProcess, 5000);
+        if (!TerminateProcess(processHandle.get(), 1)) {
+            rr.exitCode = GetLastError();
+            return rr;
+        }
+        DWORD terminateWait = WaitForSingleObject(processHandle.get(), 5000);
+        if (terminateWait == WAIT_FAILED) {
+            rr.exitCode = GetLastError();
+            return rr;
+        }
+        if (terminateWait == WAIT_TIMEOUT) {
+            // Process did not exit within the termination grace period.
+            rr.exitCode = static_cast<DWORD>(STILL_ACTIVE);
+            return rr;
+        }
+    }
+    else if (w == WAIT_FAILED) {
+        rr.exitCode = GetLastError();
+        return rr;
     }
 
     DWORD ec = 0;
-    if (!GetExitCodeProcess(pi.hProcess, &ec)) ec = 1;
+    if (!GetExitCodeProcess(processHandle.get(), &ec)) {
+        rr.exitCode = GetLastError();
+        return rr;
+    }
     rr.exitCode = ec;
-
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
 
     return rr;
 }

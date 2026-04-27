@@ -13,6 +13,11 @@ namespace lastexecuterecordmstest
 			Assert::AreEqual(std::wstring(L"abc"), ler::quoteArgForWindowsCommandLine(L"abc"));
 		}
 
+		TEST_METHOD(QuoteArg_Empty_ReturnsQuotedEmpty)
+		{
+			Assert::AreEqual(std::wstring(L"\"\""), ler::quoteArgForWindowsCommandLine(L""));
+		}
+
 		TEST_METHOD(QuoteArg_WithSpace_AddsQuotes)
 		{
 			Assert::AreEqual(std::wstring(L"\"a b\""), ler::quoteArgForWindowsCommandLine(L"a b"));

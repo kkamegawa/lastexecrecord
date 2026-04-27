@@ -12,6 +12,12 @@ enum class NetworkOption : std::int32_t {
     AlwaysExecute = 2             // Always execute (ignore network status)
 };
 
+struct NetworkDecision {
+    bool shouldExecute = false;
+    bool statusKnown = false;
+    std::uint32_t errorCode = 0;
+};
+
 // Check if the system has internet connectivity
 // Returns true if connected to internet (any type)
 bool hasInternetConnection();
@@ -24,5 +30,8 @@ bool isConnectionMetered();
 // Check if execution should proceed based on network option
 // Returns true if execution should continue, false if it should be skipped
 bool shouldExecuteBasedOnNetwork(NetworkOption option);
+
+// Check if execution should proceed and report whether network status was known.
+NetworkDecision evaluateNetworkOption(NetworkOption option);
 
 } // namespace ler

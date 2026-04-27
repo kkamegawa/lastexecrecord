@@ -112,5 +112,54 @@ namespace lastexecuterecordmstest
 			auto func = []() { ler::parseJson(L"{invalid}"); };
 			Assert::ExpectException<std::runtime_error>(func);
 		}
+
+		TEST_METHOD(Parse_UnterminatedString_Throws)
+		{
+			auto func = []() { ler::parseJson(L"\"unterminated"); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_RawControlCharacterInString_Throws)
+		{
+			auto func = []() { ler::parseJson(L"\"line\nbreak\""); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_LoneHighSurrogate_Throws)
+		{
+			auto func = []() { ler::parseJson(L"\"\\uD800\""); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_LoneLowSurrogate_Throws)
+		{
+			auto func = []() { ler::parseJson(L"\"\\uDC00\""); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_DuplicateObjectKey_Throws)
+		{
+			auto func = []() { ler::parseJson(L"{\"a\":1,\"a\":2}"); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_NonJsonWhitespace_Throws)
+		{
+			auto func = []() { ler::parseJson(L"\vtrue"); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(Parse_IntegerOverflow_Throws)
+		{
+			auto func = []() { ler::parseJson(L"9223372036854775808"); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
+
+		TEST_METHOD(AsInt_Double_Throws)
+		{
+			ler::JsonValue v = ler::parseJson(L"1.9");
+			auto func = [&v]() { v.asInt(L"ctx"); };
+			Assert::ExpectException<ler::JsonParseError>(func);
+		}
 	};
 }

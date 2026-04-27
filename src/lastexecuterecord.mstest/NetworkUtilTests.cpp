@@ -31,6 +31,22 @@ namespace lastexecuterecordmstest
 			Assert::IsTrue(result);
 		}
 
+		TEST_METHOD(EvaluateNetworkOption_AlwaysExecute_ReturnsKnownTrue)
+		{
+			ler::NetworkDecision decision = ler::evaluateNetworkOption(ler::NetworkOption::AlwaysExecute);
+			Assert::IsTrue(decision.statusKnown);
+			Assert::IsTrue(decision.shouldExecute);
+			Assert::AreEqual(0u, decision.errorCode);
+		}
+
+		TEST_METHOD(EvaluateNetworkOption_Invalid_ReturnsUnknownFalse)
+		{
+			ler::NetworkDecision decision = ler::evaluateNetworkOption(static_cast<ler::NetworkOption>(99));
+			Assert::IsFalse(decision.statusKnown);
+			Assert::IsFalse(decision.shouldExecute);
+			Assert::AreNotEqual(0u, decision.errorCode);
+		}
+
 		TEST_METHOD(ShouldExecuteBasedOnNetwork_ExecuteOnMetered_DoesNotCrash)
 		{
 			// NetworkOption::ExecuteOnMetered (1) depends on connection state
