@@ -71,18 +71,18 @@ Example: `lastexecuterecord.sample.json`
 
 ### Root fields
 
-- `version` (number, optional): Default is 1
-- `networkOption` (number, optional): Control execution based on network status. Default is 2
+- `version` (integer, optional): Default is 1
+- `networkOption` (integer, optional): Control execution based on network status. Default is 2
   - `0`: Execute only when internet is connected (not on metered connections)
   - `1`: Execute even on metered connections (internet connection required)
   - `2`: Always execute (ignore network status)
-- `defaults.minIntervalSeconds` (number, optional): Default minimum interval for commands
-- `defaults.timeoutSeconds` (number, optional): Default timeout for commands
+- `defaults.minIntervalSeconds` (integer, optional): Default minimum interval for commands
+- `defaults.timeoutSeconds` (integer, optional): Default timeout for commands
 - `defaults.installerWaitBehavior` (string or number, optional): Default behavior when installer is running. Default is `"wait"`
   - `"wait"` or `0`: Wait for installer to finish before executing
   - `"skip"` or `1`: Skip command if installer is running
-- `defaults.installerWaitSeconds` (number, optional): Wait time in seconds between installer checks. Default is 30
-- `defaults.installerMaxRetries` (number, optional): Maximum number of retries when waiting. Default is 10
+- `defaults.installerWaitSeconds` (integer, optional): Wait time in seconds between installer checks. Default is 30
+- `defaults.installerMaxRetries` (integer, optional): Maximum number of retries when waiting. Default is 10
 - `commands` (array, required): List of commands to run (processed from top to bottom)
 
 ### Command fields
@@ -92,13 +92,15 @@ Example: `lastexecuterecord.sample.json`
 - `exe` (string, required): Executable path (**not a shell string; use exe + args**)
 - `args` (array of string, optional): Arguments
 - `workingDirectory` (string, optional)
-- `minIntervalSeconds` (number, optional): Defaults to `defaults.minIntervalSeconds`
-- `timeoutSeconds` (number, optional): Defaults to `defaults.timeoutSeconds`
+- `minIntervalSeconds` (integer, optional): Defaults to `defaults.minIntervalSeconds`
+- `timeoutSeconds` (integer, optional): Defaults to `defaults.timeoutSeconds`
 - `installerWaitBehavior` (string or number, optional): Behavior when installer is running. Defaults to `defaults.installerWaitBehavior`
-- `installerWaitSeconds` (number, optional): Wait time between checks. Defaults to `defaults.installerWaitSeconds`
-- `installerMaxRetries` (number, optional): Maximum retries. Defaults to `defaults.installerMaxRetries`
+- `installerWaitSeconds` (integer, optional): Wait time between checks. Defaults to `defaults.installerWaitSeconds`
+- `installerMaxRetries` (integer, optional): Maximum retries. Defaults to `defaults.installerMaxRetries`
 - `lastRunUtc` (string, optional): Example `2026-01-02T12:34:56Z` (seconds precision)
-- `lastExitCode` (number, optional): Previous exit code
+- `lastExitCode` (integer, optional): Previous exit code
+
+JSON must be strict JSON: comments, duplicate object keys, unescaped control characters, and fractional values for integer fields are rejected.
 
 ### sample(winget)
 
