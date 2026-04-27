@@ -27,6 +27,7 @@
   - `readUtf8FileToWString(path)`
   - `writeWStringToUtf8FileAtomic(path, content)`
   - `acquireLockFile(path)`
+  - path helpers: `getFullPath(path)`, `pathIsAbsolute(path)`, `fileExists(path)`, `directoryExists(path)`
 
 ## Time
 

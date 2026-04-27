@@ -26,9 +26,9 @@ and skips execution based on **last execution time (seconds precision)** and **m
 | --- | --- | --- | --- | --- |
 | `name` | string | yes | - | Display name/identifier (`id` is also accepted as an alternative to name) |
 | `enabled` | bool | no | true | Always skip if false |
-| `exe` | string | yes | - | Executable file path (not a shell command) |
+| `exe` | string | yes | - | Absolute path to an existing executable file (not a shell command) |
 | `args` | array of string | no | [] | Arguments |
-| `workingDirectory` | string | no | "" | Working directory |
+| `workingDirectory` | string | no | "" | Absolute path to an existing directory when set |
 | `minIntervalSeconds` | integer | no | `defaults.minIntervalSeconds` | Used for skip decision |
 | `timeoutSeconds` | integer | no | `defaults.timeoutSeconds` | 0 means unlimited |
 | `installerWaitBehavior` | string or number | no | `defaults.installerWaitBehavior` | Behavior when installer is running ("wait" or "skip", or 0/1) |

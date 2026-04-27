@@ -5,12 +5,16 @@ This tool "controls process execution via configuration JSON", so protecting the
 ## 1. Command injection prevention
 
 - Uses `exe` and `args[]` separation with `CreateProcessW`.
+- Requires `exe` to be an absolute path to an existing file before execution.
+- Requires `workingDirectory`, when set, to be an absolute path to an existing directory.
 - Does not use shell execution methods like `cmd.exe /c` (however, if `cmd.exe` is specified in `exe`, it can be executed, so additional policies are needed to prohibit it).
 
 ## 2. Concurrent execution and corruption prevention
 
 - Prevents multiple simultaneous runs by exclusively opening `<config>.lock`.
-- Config updates are atomic: write to `.tmp` → replace with `MoveFileEx(REPLACE_EXISTING|WRITE_THROUGH)`.
+- The config path is normalized before deriving `<config>.lock`, reducing lock bypass via path aliases.
+- Config updates are atomic: write to a unique same-directory temporary file → replace with `MoveFileEx(REPLACE_EXISTING|WRITE_THROUGH)`.
+- Lock acquisition is bounded by `--lock-timeout` (default: 300 seconds).
 
 ## 3. Recommended practices
 
@@ -20,7 +24,6 @@ This tool "controls process execution via configuration JSON", so protecting the
 
 ## 4. Future enhancements
 
-- Enforce absolute path and normalization for `exe`.
 - Allow-list to prohibit/restrict `cmd.exe`, `powershell.exe`, etc.
 - Signature/hash verification for `exe` (depending on requirements).
 

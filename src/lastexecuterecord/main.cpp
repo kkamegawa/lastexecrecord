@@ -1,4 +1,6 @@
 #include <Windows.h>
+#include <cerrno>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -14,6 +16,21 @@
 
 static constexpr DWORD kLockRetryIntervalMs = 1000;  // 1 second between file-lock retries
 static constexpr DWORD kMaxSleepMs = (std::numeric_limits<DWORD>::max)(); // cap for Sleep()
+static constexpr std::int64_t kDefaultLockTimeoutSeconds = 300;
+
+static bool tryParseNonNegativeInt64(const std::wstring& text, std::int64_t& value) {
+	if (text.empty()) return false;
+
+	wchar_t* end = nullptr;
+	errno = 0;
+	long long parsed = std::wcstoll(text.c_str(), &end, 10);
+	if (errno == ERANGE || end == text.c_str() || *end != L'\0' || parsed < 0) {
+		return false;
+	}
+
+	value = static_cast<std::int64_t>(parsed);
+	return true;
+}
 
 static void printUsage(const wchar_t* exeName) {
 	std::wcout
@@ -24,13 +41,16 @@ static void printUsage(const wchar_t* exeName) {
 		<< L"Options:\n"
 		<< L"  --config <path>  Path to config JSON (default: %USERPROFILE%\\.lastexecrecord\\config.json)\n"
 		<< L"  --dry-run        Do not execute; only show decisions\n"
-		<< L"  --verbose        Print skip reasons and detailed output\n";
+		<< L"  --verbose        Print skip reasons and detailed output\n"
+		<< L"  --lock-timeout <seconds>\n"
+		<< L"                   Max time to wait for the config lock (default: 300)\n";
 }
 
 int wmain(int argc, wchar_t* argv[]) {
 	bool dryRun = false;
 	bool verbose = false;
 	std::wstring configPath = ler::defaultConfigPath();
+	std::int64_t lockTimeoutSeconds = kDefaultLockTimeoutSeconds;
 
 	// Parse arguments (skip if argc <= 1, i.e., no arguments provided)
 	if (argc > 1) {
@@ -56,6 +76,17 @@ int wmain(int argc, wchar_t* argv[]) {
 				configPath = argv[++i];
 				continue;
 			}
+			if (a == L"--lock-timeout") {
+				if (i + 1 >= argc) {
+					std::wcerr << L"--lock-timeout requires seconds\n";
+					return 2;
+				}
+				if (!tryParseNonNegativeInt64(argv[++i], lockTimeoutSeconds)) {
+					std::wcerr << L"--lock-timeout must be a non-negative integer\n";
+					return 2;
+				}
+				continue;
+			}
 
 			std::wcerr << L"Unknown argument: " << a << L"\n";
 			printUsage(argv[0]);
@@ -64,20 +95,44 @@ int wmain(int argc, wchar_t* argv[]) {
 	}
 
 	try {
-		// Auto-generate a sample config once (do not overwrite) to improve onboarding.
-		ler::ensureSampleConfigExists(configPath);
+		configPath = ler::getFullPath(configPath);
+		std::wstring configDir = ler::getDirectoryName(configPath);
+		if (configDir.empty()) {
+			throw std::runtime_error("Config path has no directory component");
+		}
+		ler::ensureDirectoryExists(configDir);
 
 		// Prevent concurrent runs against the same config file.
-		// Retry until the lock is acquired, printing a waiting message while blocked.
+		// Retry until the lock is acquired or the bounded wait expires.
 		std::wstring lockPath = configPath + L".lock";
 		ler::FileLock lock = ler::tryAcquireLockFile(lockPath);
 		if (lock.h == INVALID_HANDLE_VALUE) {
 			std::wcout << L"[wait] Waiting for file lock: " << lockPath << L"\n";
+			const std::int64_t maxTimeoutMs =
+				static_cast<std::int64_t>((std::numeric_limits<DWORD>::max)());
+			std::int64_t timeoutMs = lockTimeoutSeconds > maxTimeoutMs / 1000
+				? maxTimeoutMs
+				: lockTimeoutSeconds * 1000;
+			std::int64_t waitedMs = 0;
 			do {
-				Sleep(kLockRetryIntervalMs);
+				if (waitedMs >= timeoutMs) {
+					std::wcerr << L"Fatal: timed out waiting for file lock after "
+						<< lockTimeoutSeconds << L" seconds\n";
+					return 2;
+				}
+				DWORD sleepMs = kLockRetryIntervalMs;
+				std::int64_t remainingMs = timeoutMs - waitedMs;
+				if (remainingMs < static_cast<std::int64_t>(sleepMs)) {
+					sleepMs = static_cast<DWORD>(remainingMs);
+				}
+				Sleep(sleepMs);
+				waitedMs += sleepMs;
 				lock = ler::tryAcquireLockFile(lockPath);
 			} while (lock.h == INVALID_HANDLE_VALUE);
 		}
+
+		// Auto-generate a sample config once while holding the same config lock.
+		ler::ensureSampleConfigExists(configPath);
 
 		ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
 

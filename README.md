@@ -34,8 +34,9 @@ After installation, you can run `lastexecuterecord.exe` from your terminal.
 - `lastexecuterecord.exe --config <path>`: Specify a custom config JSON path
 - `lastexecuterecord.exe --dry-run`: Do not execute; only show decisions
 - `lastexecuterecord.exe --verbose`: Verbose logs (including skip reasons)
+- `lastexecuterecord.exe --lock-timeout <seconds>`: Maximum time to wait for the config lock (default: 300)
 
-All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose`
+All options can be combined, for example: `lastexecuterecord.exe --config myconfig.json --dry-run --verbose --lock-timeout 60`
 
 ### Windows Terminal Profile Setup
 
@@ -89,9 +90,9 @@ Example: `lastexecuterecord.sample.json`
 
 - `name` (string, required): Display name / identifier
 - `enabled` (bool, optional): Default is true
-- `exe` (string, required): Executable path (**not a shell string; use exe + args**)
+- `exe` (string, required): Absolute path to an existing executable file (**not a shell string; use exe + args**)
 - `args` (array of string, optional): Arguments
-- `workingDirectory` (string, optional)
+- `workingDirectory` (string, optional): Absolute path to an existing directory when set
 - `minIntervalSeconds` (integer, optional): Defaults to `defaults.minIntervalSeconds`
 - `timeoutSeconds` (integer, optional): Defaults to `defaults.timeoutSeconds`
 - `installerWaitBehavior` (string or number, optional): Behavior when installer is running. Defaults to `defaults.installerWaitBehavior`

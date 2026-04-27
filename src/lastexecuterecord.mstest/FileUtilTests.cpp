@@ -56,6 +56,20 @@ namespace lastexecuterecordmstest
 			Assert::AreEqual(std::wstring(L"replaced"), read2);
 		}
 
+		TEST_METHOD(Write_AtomicReplace_DoesNotUseFixedTmpPath)
+		{
+			TempFile tmp(L"fixedtmp.txt");
+			std::wstring fixedTmp = tmp.path + L".tmp";
+
+			ler::writeWStringToUtf8FileAtomic(fixedTmp, L"collision");
+			ler::writeWStringToUtf8FileAtomic(tmp.path, L"target");
+
+			Assert::AreEqual(std::wstring(L"target"), ler::readUtf8FileToWString(tmp.path));
+			Assert::AreEqual(std::wstring(L"collision"), ler::readUtf8FileToWString(fixedTmp));
+
+			DeleteFileW(fixedTmp.c_str());
+		}
+
 		TEST_METHOD(Read_EmptyFile_ReturnsEmpty)
 		{
 			TempFile tmp(L"empty.txt");
@@ -139,6 +153,19 @@ namespace lastexecuterecordmstest
 		{
 			std::wstring result = ler::getDirectoryName(L"C:\\temp\\file.txt");
 			Assert::AreEqual(std::wstring(L"C:\\temp"), result);
+		}
+
+		TEST_METHOD(PathIsAbsolute_DetectsDriveAbsolutePath)
+		{
+			Assert::IsTrue(ler::pathIsAbsolute(L"C:\\temp\\file.txt"));
+			Assert::IsFalse(ler::pathIsAbsolute(L"temp\\file.txt"));
+		}
+
+		TEST_METHOD(GetFullPath_NormalizesRelativePath)
+		{
+			std::wstring full = ler::getFullPath(L".");
+			Assert::IsTrue(ler::pathIsAbsolute(full));
+			Assert::IsTrue(ler::directoryExists(full));
 		}
 	};
 }

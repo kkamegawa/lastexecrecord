@@ -8,9 +8,18 @@
 
 namespace ler {
 
+static std::string narrowForError(const std::wstring& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (wchar_t c : value) {
+        out.push_back(c >= 0 && c <= 0x7F ? static_cast<char>(c) : '?');
+    }
+    return out;
+}
+
 static const JsonValue& requireObjectField(const JsonValue& obj, const std::wstring& key, const wchar_t* ctx) {
     const JsonValue* v = obj.tryGet(key);
-    if (!v) throw JsonParseError(std::string("Missing field: ") + std::string(key.begin(), key.end()) + " at " + std::string(std::wstring(ctx).begin(), std::wstring(ctx).end()));
+    if (!v) throw JsonParseError("Missing field: " + narrowForError(key) + " at " + narrowForError(ctx ? std::wstring(ctx) : std::wstring()));
     return *v;
 }
 
@@ -55,7 +64,7 @@ static InstallerWaitBehavior getInstallerWaitBehaviorOrDefault(const JsonValue& 
     }
     // Invalid type - throw error instead of silently returning default
     std::string msg = "Invalid type for field ";
-    msg += std::string(key.begin(), key.end());
+    msg += narrowForError(key);
     msg += " in installerWaitBehavior; expected string or integer";
     throw JsonParseError(msg);
 }
@@ -69,6 +78,30 @@ static void upsertObjectField(JsonValue& obj, const std::wstring& key, JsonValue
         }
     }
     obj.o.push_back(std::make_pair(key, std::move(value)));
+}
+
+static void validateExecutablePath(CommandConfig& command) {
+    if (!pathIsAbsolute(command.exe)) {
+        throw JsonParseError("command.exe must be an absolute path: " + narrowForError(command.name));
+    }
+
+    command.exe = getFullPath(command.exe);
+    if (!fileExists(command.exe)) {
+        throw JsonParseError("command.exe must refer to an existing file: " + narrowForError(command.name));
+    }
+}
+
+static void validateWorkingDirectory(CommandConfig& command) {
+    if (command.workingDirectory.empty()) return;
+
+    if (!pathIsAbsolute(command.workingDirectory)) {
+        throw JsonParseError("command.workingDirectory must be an absolute path: " + narrowForError(command.name));
+    }
+
+    command.workingDirectory = getFullPath(command.workingDirectory);
+    if (!directoryExists(command.workingDirectory)) {
+        throw JsonParseError("command.workingDirectory must refer to an existing directory: " + narrowForError(command.name));
+    }
 }
 
 static std::wstring sampleConfigText() {
@@ -88,8 +121,8 @@ static std::wstring sampleConfigText() {
     s += L"    {\n";
     s += L"      \"name\": \"example (disabled)\",\n";
     s += L"      \"enabled\": false,\n";
-    s += L"      \"exe\": \"C:\\\\Windows\\\\System32\\\\cmd.exe\",\n";
-    s += L"      \"args\": [\"/c\", \"echo Hello from LastExecuteRecord\"]\n";
+    s += L"      \"exe\": \"C:\\\\Windows\\\\System32\\\\whoami.exe\",\n";
+    s += L"      \"args\": []\n";
     s += L"    }\n";
     s += L"  ]\n";
     s += L"}\n";
@@ -194,6 +227,7 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
         if (cc.exe.empty()) {
             throw JsonParseError("command.exe is required");
         }
+        validateExecutablePath(cc);
 
         // args
         const JsonValue* argsV = c.tryGet(L"args");
@@ -205,6 +239,7 @@ AppConfig loadAndValidateConfig(const std::wstring& configPath) {
         }
 
         cc.workingDirectory = getStringFieldOrEmpty(c, L"workingDirectory");
+        validateWorkingDirectory(cc);
 
         cc.minIntervalSeconds = getIntFieldOrDefault(c, L"minIntervalSeconds", cfg.defaultMinIntervalSeconds);
         if (cc.minIntervalSeconds < 0) throw JsonParseError("minIntervalSeconds must be >= 0");
