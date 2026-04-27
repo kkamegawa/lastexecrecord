@@ -176,7 +176,7 @@ This behavior is controlled by the `installerWaitBehavior` configuration field (
     {
       "name": "system update",
       "exe": "C:\\Windows\\System32\\sudo.exe",
-      "args": ["upgrade", "--all"],
+      "args": ["winget", "upgrade", "--all"],
       "installerWaitBehavior": "wait"
     }
   ]

@@ -162,17 +162,21 @@ std::wstring readUtf8FileToWString(const std::wstring& path) {
     std::string bytes;
     bytes.resize(static_cast<size_t>(size.QuadPart));
 
-    DWORD read = 0;
     if (size.QuadPart > 0) {
-        if (!ReadFile(h, &bytes[0], static_cast<DWORD>(bytes.size()), &read, nullptr)) {
-            CloseHandle(h);
-            throw win32Error("ReadFile failed");
+        size_t totalRead = 0;
+        while (totalRead < bytes.size()) {
+            DWORD toRead = static_cast<DWORD>(bytes.size() - totalRead);
+            DWORD bytesRead = 0;
+            if (!ReadFile(h, &bytes[totalRead], toRead, &bytesRead, nullptr)) {
+                CloseHandle(h);
+                throw win32Error("ReadFile failed");
+            }
+            if (bytesRead == 0) {
+                CloseHandle(h);
+                throw std::runtime_error("ReadFile returned fewer bytes than expected");
+            }
+            totalRead += bytesRead;
         }
-        if (read != bytes.size()) {
-            CloseHandle(h);
-            throw std::runtime_error("ReadFile returned fewer bytes than expected");
-        }
-        bytes.resize(read);
     }
     if (!CloseHandle(h)) throw win32Error("CloseHandle(read) failed");
 

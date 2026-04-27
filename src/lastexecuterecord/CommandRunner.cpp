@@ -169,6 +169,11 @@ RunResult runProcess(const std::wstring& exePath,
             rr.exitCode = GetLastError();
             return rr;
         }
+        if (terminateWait == WAIT_TIMEOUT) {
+            // Process did not exit within the termination grace period.
+            rr.exitCode = static_cast<DWORD>(STILL_ACTIVE);
+            return rr;
+        }
     }
     else if (w == WAIT_FAILED) {
         rr.exitCode = GetLastError();

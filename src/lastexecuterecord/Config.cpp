@@ -82,12 +82,16 @@ static void upsertObjectField(JsonValue& obj, const std::wstring& key, JsonValue
 
 static void validateExecutablePath(CommandConfig& command) {
     if (!pathIsAbsolute(command.exe)) {
-        throw JsonParseError("command.exe must be an absolute path: " + narrowForError(command.name));
+        throw JsonParseError(
+            "command.exe must be an absolute path: " + narrowForError(command.exe) +
+            " (command name: " + narrowForError(command.name) + ")");
     }
 
     command.exe = getFullPath(command.exe);
     if (!fileExists(command.exe)) {
-        throw JsonParseError("command.exe must refer to an existing file: " + narrowForError(command.name));
+        throw JsonParseError(
+            "command.exe must refer to an existing file: " + narrowForError(command.exe) +
+            " (command name: " + narrowForError(command.name) + ")");
     }
 }
 
@@ -95,12 +99,18 @@ static void validateWorkingDirectory(CommandConfig& command) {
     if (command.workingDirectory.empty()) return;
 
     if (!pathIsAbsolute(command.workingDirectory)) {
-        throw JsonParseError("command.workingDirectory must be an absolute path: " + narrowForError(command.name));
+        throw JsonParseError(
+            "command.workingDirectory must be an absolute path for command '" +
+            narrowForError(command.name) + "': " +
+            narrowForError(command.workingDirectory));
     }
 
     command.workingDirectory = getFullPath(command.workingDirectory);
     if (!directoryExists(command.workingDirectory)) {
-        throw JsonParseError("command.workingDirectory must refer to an existing directory: " + narrowForError(command.name));
+        throw JsonParseError(
+            "command.workingDirectory must refer to an existing directory for command '" +
+            narrowForError(command.name) + "': " +
+            narrowForError(command.workingDirectory));
     }
 }
 
