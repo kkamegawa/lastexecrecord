@@ -5,9 +5,9 @@
 ## Entry point
 
 - `src/lastexecuterecord/main.cpp`
-  - `wmain` 実装
-  - `--config`, `--dry-run`, `--verbose`
-  - コマンドの順次実行、スキップ判定、config の更新
+   - `wmain` 実装
+   - `--config`, `--dry-run`, `--verbose`, `--lock-timeout`
+   - コマンドの順次実行、スキップ判定、config の更新
 
 ## Config
 
@@ -45,10 +45,11 @@
 ## Network checking
 
 - `src/lastexecuterecord/NetworkUtil.h/.cpp`
-  - `hasInternetConnection()`
-  - `isConnectionMetered()`
-  - `shouldExecuteBasedOnNetwork(option)`
-  - `NetworkOption` enum: ExecuteWhenConnected(0), ExecuteOnMetered(1), AlwaysExecute(2)
+   - `hasInternetConnection()`
+   - `isConnectionMetered()`
+   - `shouldExecuteBasedOnNetwork(option)`
+   - `evaluateNetworkOption(option)` - returns whether execution should proceed and whether network status was verified
+   - `NetworkOption` enum: ExecuteWhenConnected(0), ExecuteOnMetered(1), AlwaysExecute(2)
 
 ## Installer detection
 

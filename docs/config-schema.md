@@ -49,6 +49,7 @@ and skips execution based on **last execution time (seconds precision)** and **m
   - `1`: Execute even on metered connections (internet connection required)
   - `2`: Always execute (regardless of network status) - Default
 - Network check is performed once at startup, and all commands are skipped if the condition is not met
+- For options `0` and `1`, if network status cannot be verified, execution is skipped. In `--verbose` mode the failure code is printed.
 
 ## Skip logic
 
@@ -72,6 +73,7 @@ The application can detect when Windows installer processes (such as `msiexec.ex
   - Default: wait 30 seconds, retry up to 10 times (total wait: up to 300 seconds)
 - When skipping (`installerWaitBehavior` is `"skip"`):
   - The command is immediately skipped if an installer is detected
+- If installer status cannot be verified, verbose mode prints a warning and execution proceeds. This avoids blocking command execution on an unverifiable installer state.
 
 **Detected installer processes:**
 - `msiexec.exe` (Windows Installer)

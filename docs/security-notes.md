@@ -33,6 +33,7 @@ This tool "controls process execution via configuration JSON", so protecting the
 - Network status check is performed once at startup and uses COM.
 - COM initialization is done within functions and does not re-initialize if already initialized.
 - No administrator privileges required to access network information (works with standard user).
+- Network-gated modes fail closed: if network status cannot be verified for `ExecuteWhenConnected` or `ExecuteOnMetered`, commands are skipped and verbose mode reports the error code.
 
 ## 6. Installer detection
 

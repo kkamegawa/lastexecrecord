@@ -77,6 +77,7 @@ Example: `lastexecuterecord.sample.json`
   - `0`: Execute only when internet is connected (not on metered connections)
   - `1`: Execute even on metered connections (internet connection required)
   - `2`: Always execute (ignore network status)
+  - If network status cannot be verified for option `0` or `1`, execution is skipped. `--verbose` prints the check failure code.
 - `defaults.minIntervalSeconds` (integer, optional): Default minimum interval for commands
 - `defaults.timeoutSeconds` (integer, optional): Default timeout for commands
 - `defaults.installerWaitBehavior` (string or number, optional): Default behavior when installer is running. Default is `"wait"`
@@ -132,7 +133,9 @@ JSON must be strict JSON: comments, duplicate object keys, unescaped control cha
 ## Notes (security)
 
 - The config uses `exe` + `args[]` and does not assume shell execution like `cmd.exe /c` (helps reduce injection risk).
+- `exe` must be an absolute path to an existing executable file. `workingDirectory`, when set, must be an absolute path to an existing directory.
 - To prevent concurrent runs, the program acquires an exclusive `<config>.lock` file.
+- Config updates are written atomically through a unique same-directory temporary file. The default lock wait is bounded to 300 seconds and can be changed with `--lock-timeout`.
 - **DO NOT** use environment variables or user input to construct `exe` or `args` in the config file, as this may lead to command injection vulnerabilities.
 
 ## Installer detection and wait behavior
@@ -172,7 +175,7 @@ This behavior is controlled by the `installerWaitBehavior` configuration field (
   "commands": [
     {
       "name": "system update",
-      "exe": "winget.exe",
+      "exe": "C:\\Windows\\System32\\sudo.exe",
       "args": ["upgrade", "--all"],
       "installerWaitBehavior": "wait"
     }
@@ -184,7 +187,7 @@ This behavior is controlled by the `installerWaitBehavior` configuration field (
 
 ### Building
 
-This project uses Visual Studio 2022/2025 or MSBuild.
+This project uses Visual Studio 2022/2026 or MSBuild.
 
 **Visual Studio:**
 ```cmd

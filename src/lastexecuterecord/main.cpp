@@ -135,8 +135,13 @@ int wmain(int argc, wchar_t* argv[]) {
 
 		ler::AppConfig cfg = ler::loadAndValidateConfig(configPath);
 
-		// Check network status early if networkOption requires it
-		if (!ler::shouldExecuteBasedOnNetwork(cfg.networkOption)) {
+		// Check network status early if networkOption requires it.
+		ler::NetworkDecision networkDecision = ler::evaluateNetworkOption(cfg.networkOption);
+		if (!networkDecision.statusKnown && verbose) {
+			std::wcout << L"[warn] Network status check failed (error="
+				<< networkDecision.errorCode << L"); skipping network-gated commands\n";
+		}
+		if (!networkDecision.shouldExecute) {
 			if (verbose) {
 				std::wcout << L"[skip] Skipping all commands due to network status (networkOption="
 					<< static_cast<int>(cfg.networkOption) << L")\n";
