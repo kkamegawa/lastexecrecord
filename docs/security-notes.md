@@ -40,5 +40,5 @@ This tool "controls process execution via configuration JSON", so protecting the
 - No administrator privileges required to enumerate processes (works with standard user).
 - Process name comparison is case-insensitive for reliability.
 - Detection is limited to common installer process names (`msiexec.exe`, `setup.exe`, etc.).
-- Failed snapshot creation (e.g., insufficient permissions) is treated as "no installer running" to avoid blocking execution.
+- Failed snapshot creation is represented as `CheckFailed`; verbose mode logs a warning and execution proceeds to avoid blocking on an unverifiable installer state.
 - The handle to the snapshot is explicitly closed using `CloseHandle` to avoid resource leaks.

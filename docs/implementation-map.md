@@ -52,7 +52,8 @@
 
 ## Installer detection
 
-- `src/lastexecuterecord/InstallerUtil.h/.cpp`
+  - `src/lastexecuterecord/InstallerUtil.h/.cpp`
+  - `checkInstallerRunning()` - Returns Running/NotRunning/CheckFailed status
   - `isInstallerRunning()` - Checks if installer processes (msiexec.exe, setup.exe, etc.) are running
   - `waitForInstallerToFinish(waitSeconds, maxRetries)` - Waits for installer to finish with retries
   - Uses `CreateToolhelp32Snapshot` and process enumeration APIs

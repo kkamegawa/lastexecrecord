@@ -15,7 +15,6 @@
 #include "TimeUtil.h"
 
 static constexpr DWORD kLockRetryIntervalMs = 1000;  // 1 second between file-lock retries
-static constexpr DWORD kMaxSleepMs = (std::numeric_limits<DWORD>::max)(); // cap for Sleep()
 static constexpr std::int64_t kDefaultLockTimeoutSeconds = 300;
 
 static bool tryParseNonNegativeInt64(const std::wstring& text, std::int64_t& value) {
@@ -198,52 +197,25 @@ int wmain(int argc, wchar_t* argv[]) {
 				continue;
 			}
 
-			// Check for running installer processes
-			if (ler::isInstallerRunning()) {
+			ler::InstallerCheckResult installerCheck = ler::checkInstallerRunning();
+			if (installerCheck.status == ler::InstallerCheckStatus::CheckFailed) {
+				if (verbose) {
+					std::wcout << L"[warn] " << c.name << L": installer check failed (error="
+						<< installerCheck.errorCode << L"); proceeding\n";
+				}
+			}
+			else if (installerCheck.status == ler::InstallerCheckStatus::Running) {
 				if (c.installerWaitBehavior == ler::InstallerWaitBehavior::Skip) {
 					std::wcout << L"[skip] " << c.name << L": installer process is running (configured to skip)\n";
 					continue;
 				}
 				else {
-					// Wait for installer to finish, printing a status line on each attempt.
-					// Treat installerMaxRetries <= 0 as 1 (guarantee at least one wait attempt).
 					std::int64_t maxRetries = c.installerMaxRetries > 0 ? c.installerMaxRetries : 1;
+					std::int64_t waitSeconds = c.installerWaitSeconds > 0 ? c.installerWaitSeconds : 1;
+					std::wcout << L"[wait] " << c.name << L": installer process detected, waiting "
+						<< L"(" << maxRetries << L" checks, " << waitSeconds << L"s interval)...\n";
 
-					// Compute the actual wait interval in seconds, matching the Sleep() duration.
-					const std::int64_t maxSleepSeconds = static_cast<std::int64_t>(kMaxSleepMs) / 1000;
-					std::int64_t effectiveWaitSeconds;
-					if (c.installerWaitSeconds <= 0) {
-						effectiveWaitSeconds = 1; // Ensure at least a minimal wait
-					}
-					else if (c.installerWaitSeconds > maxSleepSeconds) {
-						effectiveWaitSeconds = maxSleepSeconds; // Cap to Sleep() limit
-					}
-					else {
-						effectiveWaitSeconds = c.installerWaitSeconds;
-					}
-					DWORD sleepMs = static_cast<DWORD>(effectiveWaitSeconds * 1000);
-
-					bool installerFinished = false;
-					for (std::int64_t attempt = 0; attempt < maxRetries; ++attempt) {
-						// Check immediately whether the installer has finished.
-						if (!ler::isInstallerRunning()) {
-							installerFinished = true;
-							break;
-						}
-
-						// Only sleep if we have another attempt remaining.
-						if (attempt + 1 < maxRetries) {
-							std::wcout << L"[wait] " << c.name << L": installer process detected, waiting "
-								<< L"(attempt " << (attempt + 1) << L"/" << maxRetries
-								<< L", " << effectiveWaitSeconds << L"s interval";
-							if (effectiveWaitSeconds != c.installerWaitSeconds) {
-								std::wcout << L" (configured " << c.installerWaitSeconds << L"s)";
-							}
-							std::wcout << L")...\n";
-							Sleep(sleepMs);
-						}
-					}
-					if (!installerFinished) {
+					if (!ler::waitForInstallerToFinish(waitSeconds, maxRetries)) {
 						std::wcout << L"[skip] " << c.name << L": installer still running after waiting\n";
 						continue;
 					}
