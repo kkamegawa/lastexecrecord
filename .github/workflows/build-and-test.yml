@@ -43,7 +43,7 @@ jobs:
         uses: actions/dependency-review-action@v4
 
   build-and-test:
-    runs-on: windows-latest
+    runs-on: 	windows-2025-vs2026
     timeout-minutes: 45
     permissions:
       contents: read

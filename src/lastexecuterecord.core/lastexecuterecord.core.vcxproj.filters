@@ -26,6 +26,12 @@
     <ClCompile Include="..\lastexecuterecord\TimeUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\lastexecuterecord\InstallerUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lastexecuterecord\NetworkUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\lastexecuterecord\CommandRunner.h">
@@ -41,6 +47,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\lastexecuterecord\TimeUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lastexecuterecord\InstallerUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lastexecuterecord\NetworkUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
