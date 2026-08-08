@@ -36,7 +36,7 @@ jobs:
         uses: microsoft/setup-msbuild@v3
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.3
+        uses: github/codeql-action/init@v4.37.6
         with:
           languages: c-cpp
 
@@ -44,4 +44,4 @@ jobs:
         run: msbuild .\src\lastexecuterecord\lastexecuterecord.vcxproj /m:1 /nr:false /p:Configuration=Release /p:Platform=x64
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.3
+        uses: github/codeql-action/analyze@v4.37.6
