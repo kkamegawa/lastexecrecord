@@ -44,4 +44,4 @@ jobs:
         run: msbuild .\src\lastexecuterecord\lastexecuterecord.vcxproj /m:1 /nr:false /p:Configuration=Release /p:Platform=x64
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@9e3211c9a3b9311dfe05da2ed48eea3386f042dd # v4.37.6
+        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
