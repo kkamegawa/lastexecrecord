@@ -36,7 +36,7 @@ jobs:
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9e3211c9a3b9311dfe05da2ed48eea3386f042dd # v4.37.6
+        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           languages: c-cpp
 
